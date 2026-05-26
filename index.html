@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TLM Inventory</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:13px;color:#1e293b;background:#f1f5f9}
+
+/* ── LAYOUT ── */
+.wrap{display:flex;flex-direction:column;height:100vh}
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── TOP BAR ── */
+.topbar{height:58px;background:#1e293b;display:flex;align-items:center;gap:14px;padding:0 24px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg path{fill:#fff}
+.logo svg{height:20px}
+.logo span{font-size:11px;color:#94a3b8;font-weight:500;letter-spacing:.04em}
+.sep{width:1px;height:18px;background:#334155}
+.spacer{flex:1}
+.search-wrap{position:relative;flex:1;max-width:320px}
+.search-wrap input{width:100%;padding:7px 12px 7px 34px;border:1px solid #334155;border-radius:8px;background:#0f172a;font-size:12px;font-family:inherit;outline:none;color:#e2e8f0}
+.search-wrap input::placeholder{color:#64748b}
+.search-wrap input:focus{border-color:#3b82f6;background:#1e293b}
+.search-wrap .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#64748b;font-size:13px;pointer-events:none}
+.pill{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 11px;border-radius:20px;font-weight:600;border:1px solid #334155;background:#0f172a;color:#94a3b8;white-space:nowrap}
+.pill.ok{background:#064e3b;color:#6ee7b7;border-color:#065f46}
+.pill.err{background:#7f1d1d;color:#fca5a5;border-color:#991b1b}
+.pill.sync{background:#78350f;color:#fcd34d;border-color:#92400e}
+.tbtn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;font-size:12px;font-family:inherit;cursor:pointer;font-weight:600;border:none;transition:all .15s}
+.tbtn.out{background:transparent;border:1px solid #334155;color:#94a3b8}
+.tbtn.out:hover{background:#334155;color:#e2e8f0}
+.tbtn.dark{background:#3b82f6;color:#fff}
+.tbtn.dark:hover{background:#2563eb}
+.av{width:32px;height:32px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+
+/* ── SIDEBAR ── */
+.sidebar{width:210px;flex-shrink:0;background:#1e293b;display:flex;flex-direction:column;overflow-y:auto}
+.slabel{font-size:10px;font-weight:700;color:#475569;padding:12px 16px 4px;letter-spacing:.1em;text-transform:uppercase}
+.sitem{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:12px;color:#94a3b8;background:none;border:none;width:100%;text-align:left;font-family:inherit;border-left:3px solid transparent;transition:all .12s}
+.sitem:hover{background:#334155;color:#e2e8f0}
+.sitem:hover i{color:#e2e8f0}
+.sitem.on{background:#1d4ed8;color:#fff;font-weight:600;border-left-color:#60a5fa}
+.sitem.on i{color:#fff}
+.sitem i{font-size:15px;color:#64748b;flex-shrink:0}
+.sbadge{margin-left:auto;font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700;background:#1d4ed8;color:#fff}
+.sitem.on .sbadge{background:#fff;color:#1d4ed8}
+.sfoot{margin-top:auto;padding:12px 16px;border-top:1px solid #334155}
+.sfoot div:first-child{font-size:12px;font-weight:600;color:#e2e8f0}
+.sfoot div:last-child{font-size:10px;color:#64748b;margin-top:2px}
+
+/* ── PAGE CONTENT ── */
+.page{flex:1;overflow-y:auto;padding:24px;background:#f1f5f9}
+
+/* ── PAGE HEADER ── */
+.row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.ptitle{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:3px;color:#0f172a}
+.psub{font-size:12px;color:#64748b}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.mc{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.mc .bar{position:absolute;top:0;left:0;right:0;height:4px}
+.mc .lbl{font-size:11px;color:#64748b;margin-bottom:6px;font-weight:500;display:flex;align-items:center;gap:4px}
+.mc .val{font-size:26px;font-weight:700;color:#0f172a;line-height:1}
+.mc .sub{font-size:11px;color:#94a3b8;margin-top:3px}
+
+/* ── PANELS ── */
+.panel{background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.phead{padding:12px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#fff}
+.phead-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;color:#0f172a}
+.filters{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+
+/* ── FORM ELEMENTS ── */
+select,input[type=text],input[type=date],input[type=number],textarea{font-family:inherit;font-size:12px;padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;background:#fff;color:#1e293b;outline:none;transition:border-color .15s}
+select:focus,input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+
+/* ── BUTTONS ── */
+.btn{font-family:inherit;font-size:12px;padding:6px 12px;border:1px solid #e2e8f0;border-radius:7px;background:#fff;cursor:pointer;color:#374151;display:inline-flex;align-items:center;gap:5px;font-weight:500;transition:all .12s}
+.btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.btn.sm{font-size:11px;padding:3px 8px}
+.btn.ico{padding:4px 8px;font-size:13px}
+.btn.blue{background:#1d4ed8;color:#fff;border-color:#1d4ed8;box-shadow:0 1px 2px rgba(29,78,216,.3)}
+.btn.blue:hover{background:#1e40af}
+.btn.red{color:#dc2626;border-color:#fca5a5}
+.btn.red:hover{background:#fef2f2}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:9px 14px;color:#64748b;font-size:10px;font-weight:700;border-bottom:2px solid #f1f5f9;background:#f8fafc;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle;color:#334155}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:2px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.g{background:#dcfce7;color:#15803d}.y{background:#fef9c3;color:#a16207}.r{background:#fee2e2;color:#dc2626}
+.b{background:#dbeafe;color:#1d4ed8}.gr{background:#f1f5f9;color:#475569}.t{background:#d1fae5;color:#065f46}
+.pu{background:#ede9fe;color:#6d28d9}
+
+/* ── MISC ── */
+.bar2{width:64px;height:5px;background:#e2e8f0;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+.bar2fill{height:5px;border-radius:4px}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#dcfce7;color:#15803d}
+.dc{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#64748b;background:#f1f5f9;border-radius:5px;padding:2px 7px}
+.circ{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);align-items:flex-start;justify-content:center;padding-top:40px;z-index:200}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:24px;width:580px;max-width:96%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.mrow{margin-bottom:12px}
+.mrow label{display:block;font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+.mrow input,.mrow select,.mrow textarea{width:100%;font-family:inherit;font-size:12px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9}
+.asel{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:12px}
+.asel-top{display:flex;align-items:center;padding:7px 12px;border-bottom:1px solid #f1f5f9;background:#f8fafc}
+.asel-top i{color:#94a3b8;font-size:14px}
+.asel-top input{flex:1;border:none;background:transparent;padding:0 8px;font-size:12px;font-family:inherit;outline:none}
+.asel-list{max-height:175px;overflow-y:auto}
+.aitem{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-bottom:.5px solid #f1f5f9}
+.aitem:last-child{border-bottom:none}
+.aitem:hover{background:#f8fafc}
+.aitem.sel{background:#eff6ff}
+.aadd{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border-top:1px solid #f1f5f9;color:#1d4ed8}
+.aadd:hover{background:#eff6ff}
+.aprev{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#eff6ff;border-top:1px solid #bfdbfe}
+.nform{padding:12px 14px;background:#fffbeb;border-top:1px solid #fcd34d}
+.fi2{width:100%;font-family:inherit;font-size:12px;padding:6px 9px;border:1px solid #e2e8f0;border-radius:6px;outline:none}
+.fi2:focus{border-color:#3b82f6}
+.ptag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+.te{background:#dbeafe;color:#1d4ed8}.tx{background:#ede9fe;color:#6d28d9}.tv{background:#d1fae5;color:#065f46}
+.spin{width:20px;height:20px;border:2px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#laptop-cards>div,#sys-blocks>div{height:auto!important;min-height:0!important;overflow:visible!important}
+#laptop-cards{align-items:start!important}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#f8fafc;padding:10px 20px;border-radius:10px;font-size:12px;font-weight:600;display:none;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.empty{padding:2.5rem;text-align:center;color:#94a3b8;font-size:12px}
+
+.row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.ptitle{font-size:17px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.psub{font-size:12px;color:#6b7280}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.mc{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;position:relative;overflow:hidden}
+.mc .bar{position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.mc .lbl{font-size:11px;color:#6b7280;margin-bottom:5px}
+.mc .val{font-size:22px;font-weight:700}
+.mc .sub{font-size:11px;color:#9ca3af;margin-top:2px}
+.panel{background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;overflow:hidden}
+.phead{padding:10px 14px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.phead-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.filters{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+select,input[type=text],input[type=date],input[type=number],textarea{font-family:inherit;font-size:12px;padding:5px 8px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;color:#1a1a1a;outline:none}
+select:focus,input:focus{border-color:#3b82f6}
+.btn{font-family:inherit;font-size:12px;padding:5px 11px;border:1px solid #e5e7eb;border-radius:6px;background:transparent;cursor:pointer;color:#374151;display:inline-flex;align-items:center;gap:4px;font-weight:500}
+.btn:hover{background:#f3f4f6}
+.btn.sm{font-size:11px;padding:2px 7px}
+.btn.ico{padding:3px 7px;font-size:13px}
+.btn.blue{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+.btn.blue:hover{background:#1e40af}
+.btn.red{color:#991b1b;border-color:#fca5a5}
+.btn.red:hover{background:#fee2e2}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;color:#6b7280;font-size:11px;font-weight:700;border-bottom:1px solid #e5e7eb;background:#f9fafb;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfc}
+.badge{display:inline-flex;align-items:center;gap:2px;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.g{background:#dcfce7;color:#166534}.y{background:#fef9c3;color:#854d0e}.r{background:#fee2e2;color:#991b1b}
+.b{background:#dbeafe;color:#1e40af}.gr{background:#f3f4f6;color:#374151}.t{background:#d1fae5;color:#065f46}
+.pu{background:#ede9fe;color:#5b21b6}
+.bar2{width:64px;height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle}
+.bar2fill{height:5px;border-radius:4px}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:20px;font-size:11px;font-weight:600;background:#d1fae5;color:#065f46}
+.dc{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#6b7280;background:#f3f4f6;border-radius:5px;padding:2px 6px}
+.circ{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:flex-start;justify-content:center;padding-top:40px;z-index:200}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:20px;width:560px;max-width:96%;max-height:85vh;overflow-y:auto}
+.mrow{margin-bottom:10px}
+.mrow label{display:block;font-size:10px;font-weight:700;color:#6b7280;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.mrow input,.mrow select,.mrow textarea{width:100%;font-family:inherit;font-size:12px;padding:7px 9px;border:1px solid #e5e7eb;border-radius:7px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid #e5e7eb}
+.asel{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.asel-top{display:flex;align-items:center;padding:6px 10px;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+.asel-top i{color:#9ca3af;font-size:13px}
+.asel-top input{flex:1;border:none;background:transparent;padding:0 7px;font-size:12px;font-family:inherit;outline:none}
+.asel-list{max-height:175px;overflow-y:auto}
+.aitem{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:.5px solid #f3f4f6}
+.aitem:last-child{border-bottom:none}
+.aitem:hover{background:#f9fafb}
+.aitem.sel{background:#eff6ff}
+.aadd{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-top:1px solid #e5e7eb;color:#1d4ed8}
+.aadd:hover{background:#eff6ff}
+.aprev{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#eff6ff;border-top:1px solid #bfdbfe}
+.nform{padding:11px 12px;background:#fffbeb;border-top:1px solid #fcd34d}
+.fi2{width:100%;font-family:inherit;font-size:12px;padding:5px 8px;border:.5px solid #e5e7eb;border-radius:6px;outline:none}
+.fi2:focus{border-color:#3b82f6}
+.ptag{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600}
+.te{background:#dbeafe;color:#1e40af}.tx{background:#ede9fe;color:#5b21b6}.tv{background:#d1fae5;color:#065f46}
+.spin{width:20px;height:20px;border:2px solid #e5e7eb;border-top-color:#1d4ed8;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#laptop-cards>div,#sys-blocks>div{height:auto!important;min-height:0!important;overflow:visible!important}
+#laptop-cards{align-items:start!important}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;display:none;z-index:999}
+.empty{padding:2rem;text-align:center;color:#9ca3af;font-size:12px}
+
+.login-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 25px 60px rgba(0,0,0,.4)}
+.login-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:28px;gap:12px}
+.login-logo-icon{width:52px;height:52px;background:#1e293b;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.login-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:4px;color:#0f172a}
+.login-sub{font-size:12px;color:#64748b;text-align:center;margin-bottom:28px}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.login-field input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:inherit;outline:none;color:#1e293b;background:#f8fafc;transition:all .15s}
+.login-field input:focus{border-color:#3b82f6;background:#fff;box-shadow:0 0 0 4px rgba(59,130,246,.1)}
+.login-btn2{width:100%;padding:12px;background:#1e293b;color:#fff;border:none;border-radius:9px;font-size:13px;font-family:inherit;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s;letter-spacing:.02em}
+.login-btn2:hover{background:#0f172a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.login-btn2:active{transform:translateY(0)}
+.login-err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:9px;padding:10px 14px;font-size:12px;margin-bottom:14px;display:none;align-items:center;gap:8px}
+.login-err.show{display:flex}
+.login-footer2{text-align:center;font-size:11px;color:#94a3b8;margin-top:24px;padding-top:20px;border-top:1px solid #f1f5f9}
+.pw-row{position:relative}
+.pw-row input{padding-right:40px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;transition:color .15s}
+.pw-toggle:hover{color:#475569}
+</style>
+</head>
+<body>
+
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon"><svg height="20" viewBox="0 0 910 574" fill="none"><path d="M807.267 28.519H823.31C844.021 28.519 860.811 44.812 860.811 64.911V332.43C860.811 345.976 849.5 356.953 835.54 356.953C821.581 356.953 810.27 345.976 810.27 332.43V80.144L674.07 336.686C667.463 349.138 654.241 356.962 639.808 356.962C625.376 356.962 612.153 349.138 605.547 336.686L469.757 80.903V332.43C469.748 345.976 458.436 356.953 444.477 356.953C430.517 356.953 419.206 345.976 419.206 332.43V64.911C419.206 44.812 435.996 28.519 456.707 28.519H472.332C486.828 28.519 500.114 36.378 506.757 48.892L639.799 299.509L772.841 48.892C779.484 36.378 792.77 28.519 807.267 28.519ZM350.119 380.24V53.042C350.119 39.496 338.808 28.519 324.848 28.519C310.889 28.519 299.578 39.496 299.578 53.042V398.29C299.578 417.806 315.885 433.631 335.996 433.631H831.636C846.824 433.631 859.146 421.683 859.146 406.935C859.146 392.197 846.833 380.24 831.636 380.24H350.119ZM284.908 53.042C284.908 43.743 288.303 35.204 293.945 28.519H74.271C60.311 28.519 49 39.496 49 53.042C49 66.588 60.311 77.565 74.271 77.565H190.077V409.099C190.077 422.645 201.389 433.622 215.348 433.622C229.307 433.622 240.619 422.645 240.619 409.099V77.565H284.908V53.042Z" fill="#fff"/></svg></div>
+    </div>
+    <div class="login-title">TLM Inventory</div>
+    <div class="login-sub">Sign in to continue</div>
+    <div class="login-err" id="login-err">Invalid username or password</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="l-user" placeholder="Enter username" onkeydown="if(event.key==='Enter')tryLogin()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <div class="pw-row">
+        <input type="password" id="l-pass" placeholder="Enter password" onkeydown="if(event.key==='Enter')tryLogin()">
+        <button class="pw-toggle" onclick="var i=document.getElementById('l-pass');i.type=i.type==='password'?'text':'password'" type="button"><i class="ti ti-eye"></i></button>
+      </div>
+    </div>
+    <button class="login-btn2" onclick="tryLogin()">Sign in</button>
+    <div class="login-footer2">TLM Internal IT Inventory System</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="logo">
+    <svg viewBox="0 0 910 574" fill="none"><path d="M807.267 28.519H823.31C844.021 28.519 860.811 44.812 860.811 64.911V332.43C860.811 345.976 849.5 356.953 835.54 356.953C821.581 356.953 810.27 345.976 810.27 332.43V80.144L674.07 336.686C667.463 349.138 654.241 356.962 639.808 356.962C625.376 356.962 612.153 349.138 605.547 336.686L469.757 80.903V332.43C469.748 345.976 458.436 356.953 444.477 356.953C430.517 356.953 419.206 345.976 419.206 332.43V64.911C419.206 44.812 435.996 28.519 456.707 28.519H472.332C486.828 28.519 500.114 36.378 506.757 48.892L639.799 299.509L772.841 48.892C779.484 36.378 792.77 28.519 807.267 28.519ZM350.119 380.24V53.042C350.119 39.496 338.808 28.519 324.848 28.519C310.889 28.519 299.578 39.496 299.578 53.042V398.29C299.578 417.806 315.885 433.631 335.996 433.631H831.636C846.824 433.631 859.146 421.683 859.146 406.935C859.146 392.197 846.833 380.24 831.636 380.24H350.119ZM284.908 53.042C284.908 43.743 288.303 35.204 293.945 28.519H74.271C60.311 28.519 49 39.496 49 53.042C49 66.588 60.311 77.565 74.271 77.565H190.077V409.099C190.077 422.645 201.389 433.622 215.348 433.622C229.307 433.622 240.619 422.645 240.619 409.099V77.565H284.908V53.042Z" fill="#1a1a1a"/></svg>
+    <div class="sep"></div>
+    <span>Inventory</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <i class="ti ti-search si"></i>
+    <input type="text" id="srch" placeholder="Search items, people..." autocomplete="off">
+  </div>
+  <div id="spill" class="pill"><i class="ti ti-cloud" style="font-size:11px"></i><span id="spill-txt">Connecting...</span></div>
+  <button class="tbtn out" onclick="openAssign()"><i class="ti ti-send" style="font-size:12px"></i> Assign item</button>
+  <button class="tbtn dark" onclick="openAddItem()"><i class="ti ti-plus" style="font-size:12px"></i> Add item</button>
+  <div style="position:relative" id="av-wrap">
+    <div class="av" onclick="toggleAvMenu()" style="cursor:pointer;user-select:none" title="IT Account">IT</div>
+    <div id="av-menu" style="display:none;position:absolute;right:0;top:40px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:160px;z-index:500">
+      <div style="padding:12px 14px;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:12px;font-weight:700;color:#0f172a">IT Admin</div>
+        <div style="font-size:11px;color:#64748b;margin-top:1px">TLM Inventory</div>
+      </div>
+      <button onclick="logout()" style="width:100%;padding:10px 14px;background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:12px;color:#dc2626;font-family:inherit;text-align:left;border-radius:0 0 10px 10px" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">
+        <i class="ti ti-logout" style="font-size:14px"></i> Sign out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div class="main">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="slabel">Main</div>
+  <button class="sitem on" onclick="go('overview',this)"><i class="ti ti-layout-dashboard"></i>Overview</button>
+  <button class="sitem" onclick="go('stock',this)"><i class="ti ti-box"></i>Stock inventory</button>
+  <button class="sitem" onclick="go('assignments',this)"><i class="ti ti-send"></i>Assignments<span class="sbadge" id="nb-a" style="display:none">0</span></button>
+  <button class="sitem" onclick="go('timeline',this)"><i class="ti ti-timeline"></i>Item timeline</button>
+  <div class="slabel" style="margin-top:6px">People</div>
+  <button class="sitem" onclick="go('employees',this)"><i class="ti ti-users"></i>Employees</button>
+  <div class="slabel" style="margin-top:6px">Finance</div>
+  <button class="sitem" onclick="go('procurement',this)"><i class="ti ti-clipboard-list"></i>Procurement</button>
+  <button class="sitem" onclick="go('bills',this)"><i class="ti ti-file-invoice"></i>Bills<span class="sbadge" id="nb-bills" style="display:none">0</span></button>
+  <div class="slabel" style="margin-top:6px">SR Numbers</div>
+  <button class="sitem" onclick="go('srnumbers',this)"><i class="ti ti-hash"></i>SR Numbers</button>
+  <div class="slabel" style="margin-top:6px">Laptops</div>
+  <button class="sitem" onclick="go('laptops',this)"><i class="ti ti-device-laptop"></i>Laptops<span class="sbadge" id="nb-lp" style="display:none">0</span></button>
+  <div class="slabel" style="margin-top:6px">Systems</div>
+  <button class="sitem" onclick="go('systems',this)"><i class="ti ti-device-desktop"></i>Systems<span class="sbadge" id="nb-sys" style="display:none">0</span></button>
+  <div class="slabel" style="margin-top:6px">Software</div>
+  <button class="sitem" onclick="go('software',this)"><i class="ti ti-app-window"></i>Software<span class="sbadge" id="nb-sw" style="display:none">0</span></button>
+  <div class="slabel" style="margin-top:6px">Reports</div>
+  <button class="sitem" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Monthly report</button>
+
+  <div class="slabel" style="margin-top:6px">Actions</div>
+  <button class="sitem" onclick="syncAll()"><i class="ti ti-refresh"></i>Refresh from Sheets</button>
+  <button class="sitem" onclick="openAddPO()"><i class="ti ti-plus"></i>Add procurement</button>
+  <div class="sfoot">
+    <div style="font-size:11px;font-weight:700">TLM Inventory</div>
+    <div style="font-size:10px;color:#9ca3af;margin-top:2px">Live · Google Sheets</div>
+  </div>
+</div>
+
+<!-- PAGE CONTENT -->
+<div class="page">
+
+<!-- SEARCH RESULTS -->
+<div id="srch-panel" style="display:none"></div>
+
+<!-- OVERVIEW -->
+<div id="tab-overview" style="display:block">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-layout-dashboard" style="color:#3b82f6"></i>Overview</div><div class="psub" id="sync-lbl">Connecting to Google Sheets...</div></div>
+    <button class="btn" onclick="syncAll()"><i class="ti ti-refresh" style="font-size:11px"></i> Refresh</button>
+  </div>
+  <div id="err-box"></div>
+  <div class="metrics">
+    <div class="mc"><div class="bar" style="background:#3b82f6"></div><div class="lbl">Total procured</div><div class="val" id="m1">—</div><div class="sub">all items</div></div>
+    <div class="mc"><div class="bar" style="background:#22c55e"></div><div class="lbl">In stock</div><div class="val" id="m2" style="color:#166534">—</div><div class="sub">available</div></div>
+    <div class="mc"><div class="bar" style="background:#6366f1"></div><div class="lbl">Assigned</div><div class="val" id="m3" style="color:#4338ca">—</div><div class="sub">active</div></div>
+    <div class="mc"><div class="bar" style="background:#f59e0b"></div><div class="lbl">People</div><div class="val" id="m4" style="color:#92400e">—</div><div class="sub">assigned</div></div>
+    <div class="mc"><div class="bar" style="background:#ef4444"></div><div class="lbl">Low stock</div><div class="val" id="m5" style="color:#991b1b">—</div><div class="sub">need reorder</div></div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div class="phead-title"><i class="ti ti-chart-bar" style="color:#3b82f6"></i>Category summary</div></div>
+    <table><thead><tr><th>Item</th><th>Category</th><th>Procured</th><th>In stock</th><th>Assigned</th><th>Level</th><th>Status</th></tr></thead>
+    <tbody id="cat-body"><tr><td colspan="6" class="empty"><div style="display:flex;align-items:center;justify-content:center;gap:8px"><div class="spin"></div>Loading...</div></td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- STOCK -->
+<div id="tab-stock" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-box" style="color:#3b82f6"></i>Stock inventory</div><div class="psub">Changes save instantly to Google Sheets</div></div>
+    <div class="filters">
+      <select id="sf-cat" onchange="drawStock()"><option value="">All categories</option></select>
+      <input type="text" id="sf-q" placeholder="Search..." oninput="drawStock()" style="width:130px">
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div class="phead-title">All items <span id="stk-cnt" style="font-size:12px;font-weight:400;color:#6b7280;margin-left:4px"></span></div></div>
+    <div style="overflow-x:auto"><table style="min-width:700px">
+      <thead><tr><th>Item</th><th>Category</th><th>Model</th><th>Serial</th><th>Procured</th><th>Total</th><th>Stock</th><th>Assigned</th><th>Remaining</th><th>SR Numbers</th><th>Status</th></tr></thead>
+      <tbody id="stk-body"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- ASSIGNMENTS -->
+<div id="tab-assignments" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-send" style="color:#3b82f6"></i>Assignments</div><div class="psub">All changes save to Google Sheets immediately</div></div>
+    <button class="btn blue" onclick="openAssign()"><i class="ti ti-plus" style="font-size:12px"></i> New assignment</button>
+  </div>
+  <div class="panel">
+    <div class="phead">
+      <div class="phead-title">Log <span id="ass-cnt" style="font-size:12px;font-weight:400;color:#6b7280;margin-left:4px"></span></div>
+      <div class="filters">
+        <select id="af-stat" onchange="drawAssignments()"><option value="">All status</option><option>Active</option><option>Returned</option></select>
+        <select id="af-loc" onchange="drawAssignments()"><option value="">All locations</option></select>
+        <input type="text" id="af-q" placeholder="Search..." oninput="drawAssignments()" style="width:130px">
+      </div>
+    </div>
+    <div style="overflow-x:auto"><table style="min-width:900px">
+      <thead><tr><th>Item</th><th>Cat</th><th>Assigned to</th><th>Type</th><th>Location</th><th>SR#</th><th>Assigned on</th><th>Return by</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="ass-body"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div id="tab-timeline" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-timeline" style="color:#3b82f6"></i>Item timeline</div><div class="psub">Full lifecycle per item</div></div>
+    <select id="tl-sel" onchange="drawTimeline()" style="width:220px"><option value="">Select item...</option></select>
+  </div>
+  <div class="panel"><div style="padding:14px"><div id="tl-body"><div class="empty">Select an item above to see its timeline.</div></div></div></div>
+</div>
+
+<!-- EMPLOYEES -->
+<div id="tab-employees" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-users" style="color:#3b82f6"></i>Employees & Assignees</div><div class="psub">All people with assigned equipment</div></div>
+    <div class="filters">
+      <select id="ef-dept" onchange="drawEmployees()"><option value="">All departments</option></select>
+      <select id="ef-type" onchange="drawEmployees()"><option value="">All types</option><option value="employee">Employee</option><option value="external">External</option><option value="visitor">Visitor</option></select>
+      <input type="text" id="ef-q" placeholder="Search..." oninput="drawEmployees()" style="width:130px">
+    </div>
+  </div>
+  <div id="emp-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px"></div>
+</div>
+
+<!-- PROCUREMENT -->
+<div id="tab-procurement" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-clipboard-list" style="color:#3b82f6"></i>Procurement</div><div class="psub">Purchase orders saved to Google Sheets</div></div>
+    <button class="btn blue" onclick="openAddPO()"><i class="ti ti-plus" style="font-size:12px"></i> Add PO</button>
+  </div>
+  <div class="panel">
+    <div class="phead"><div class="phead-title">Purchase orders</div></div>
+    <table><thead><tr><th>PO#</th><th>Item</th><th>Category</th><th>Qty</th><th>Vendor</th><th>Order date</th><th>Received</th><th>Status</th><th>Bill</th></tr></thead>
+    <tbody id="po-body"></tbody></table>
+  </div>
+</div>
+
+<!-- BILLS -->
+<div id="tab-bills" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-file-invoice" style="color:#3b82f6"></i>Bills & Invoices</div><div class="psub">All uploaded bills and invoice copies</div></div>
+    <button class="btn blue" onclick="openAddBill()"><i class="ti ti-plus" style="font-size:12px"></i> Add bill</button>
+  </div>
+  <div class="panel">
+    <div class="phead"><div class="phead-title">All bills <span id="bill-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+    <div class="filters">
+      <input type="text" id="bill-q" placeholder="Search PO, filename..." oninput="drawBills()" style="width:160px">
+    </div></div>
+    <table><thead><tr><th>PO Number</th><th>File name</th><th>Type</th><th>Size</th><th>Uploaded on</th><th>Actions</th></tr></thead>
+    <tbody id="bill-body"></tbody></table>
+  </div>
+</div>
+
+<!-- SR NUMBERS -->
+<div id="tab-srnumbers" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-hash" style="color:#3b82f6"></i>SR Numbers</div><div class="psub">Green = available · Red = assigned</div></div>
+    <div class="filters">
+      <select id="sr-item" onchange="drawSR()"><option value="">All items</option></select>
+      <select id="sr-stat" onchange="drawSR()"><option value="">All status</option><option value="Available">Available</option><option value="Assigned">Assigned</option></select>
+      <input type="text" id="sr-q" placeholder="Search SR#..." oninput="drawSR()" style="width:130px">
+    </div>
+  </div>
+  <div class="panel">
+    <div class="phead"><div class="phead-title">SR register <span id="sr-cnt" style="font-size:12px;font-weight:400;color:#6b7280;margin-left:4px"></span></div></div>
+    <table><thead><tr><th>#</th><th>Item</th><th>SR Number</th><th>Status</th><th>Current holder</th><th>Assigned date</th><th>History</th></tr></thead>
+    <tbody id="sr-body"></tbody></table>
+  </div>
+</div>
+
+<!-- LAPTOPS TAB -->
+<div id="tab-laptops" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-device-laptop" style="color:#3b82f6"></i>Laptops</div><div class="psub">Full history — assignments, parts changes, configuration updates</div></div>
+    <div style="display:flex;gap:7px">
+      <button class="btn" onclick="openAddLaptopHistory()"><i class="ti ti-history" style="font-size:12px"></i> Add history</button>
+      <button class="btn blue" onclick="openAddLaptop()"><i class="ti ti-plus" style="font-size:12px"></i> Add laptop</button>
+    </div>
+  </div>
+  <!-- Laptop cards -->
+  <div id="laptop-cards"></div>
+</div>
+
+<!-- SYSTEMS TAB -->
+<div id="tab-systems" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-device-desktop" style="color:#3b82f6"></i>Systems</div><div class="psub">Total systems with block and type breakdown</div></div>
+    <button class="btn blue" onclick="openAddSystem()"><i class="ti ti-plus" style="font-size:12px"></i> Add system</button>
+  </div>
+  <!-- Metrics -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px" id="sys-metrics"></div>
+  <!-- Block breakdown -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px" id="sys-blocks"></div>
+  <!-- Systems table -->
+  <div class="panel">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-tag" style="color:#3b82f6"></i>All systems <span id="sys-cnt" style="font-size:12px;font-weight:400;color:#6b7280;margin-left:4px"></span></div>
+      <div class="filters">
+        <button class="btn sm" id="sf-all" onclick="filterSys('all',this)" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8">All</button>
+        <button class="btn sm" id="sf-b1" onclick="filterSys('Block 1',this)">Block 1</button>
+        <button class="btn sm" id="sf-b2" onclick="filterSys('Block 2',this)">Block 2</button>
+        <button class="btn sm" id="sf-dt" onclick="filterSys('Desktop',this)">Desktop</button>
+        <button class="btn sm" id="sf-lt" onclick="filterSys('Laptop',this)">Laptop</button>
+        <input type="text" id="sys-q" placeholder="Search tag, name..." oninput="drawSystems()" style="width:150px">
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+    <table><colgroup><col style="width:13%"><col style="width:11%"><col style="width:10%"><col style="width:10%"><col style="width:10%"><col style="width:12%"><col style="width:10%"><col style="width:15%"><col style="width:9%"></colgroup>
+    <thead><tr><th>Tag</th><th>Name</th><th>Type</th><th>Block</th><th>Brand</th><th>Model</th><th>Serial</th><th>Notes</th><th>Status</th></tr></thead>
+    <tbody id="sys-body"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- SOFTWARE TAB -->
+<div id="tab-software" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-app-window" style="color:#3b82f6"></i>Software Inventory</div><div class="psub">Track software licenses, installation and renewal dates</div></div>
+    <button class="btn blue" onclick="openAddSoftware()"><i class="ti ti-plus" style="font-size:12px"></i> Add software</button>
+  </div>
+  <!-- Summary cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px" id="sw-metrics"></div>
+  <!-- Table -->
+  <div class="panel">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-list" style="color:#3b82f6"></i>All software <span id="sw-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+      <div class="filters">
+        <select id="sw-stat-f" onchange="drawSoftware()"><option value="">All status</option><option value="Active">Active</option><option value="Expiring Soon">Expiring Soon</option><option value="Expired">Expired</option></select>
+        <input type="text" id="sw-q" placeholder="Search software..." oninput="drawSoftware()" style="width:150px">
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Software name</th><th>Version</th><th>Installed date</th><th>Due / Renewal date</th><th>Days left</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="sw-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- REPORTS TAB -->
+<div id="tab-reports" style="display:none">
+  <div class="row">
+    <div><div class="ptitle"><i class="ti ti-chart-bar" style="color:#3b82f6"></i>Monthly Report</div><div class="psub">Month-wise breakdown of all inventory activity</div></div>
+    <div class="filters">
+      <select id="rpt-year" onchange="drawReports()"></select>
+      <select id="rpt-month" onchange="drawReports()">
+        <option value="">All months</option>
+        <option value="01">January</option><option value="02">February</option>
+        <option value="03">March</option><option value="04">April</option>
+        <option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option>
+        <option value="09">September</option><option value="10">October</option>
+        <option value="11">November</option><option value="12">December</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Summary metrics -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px" id="rpt-metrics"></div>
+
+  <!-- Chart -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead"><div class="phead-title"><i class="ti ti-chart-bar" style="color:#3b82f6"></i>Monthly activity chart</div></div>
+    <div style="padding:16px">
+      <canvas id="rpt-chart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Assignments this month -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-send" style="color:#3b82f6"></i>Assignments <span id="rpt-a-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+    </div>
+    <table><thead><tr><th>Item</th><th>Category</th><th>Assigned to</th><th>Department</th><th>SR#</th><th>Assigned on</th><th>Status</th></tr></thead>
+    <tbody id="rpt-a-body"></tbody></table>
+  </div>
+
+  <!-- Procurement this month -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-clipboard-list" style="color:#3b82f6"></i>Procurement <span id="rpt-p-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+    </div>
+    <table><thead><tr><th>PO#</th><th>Item</th><th>Category</th><th>Qty</th><th>Vendor</th><th>Order date</th><th>Status</th></tr></thead>
+    <tbody id="rpt-p-body"></tbody></table>
+  </div>
+
+  <!-- SR Numbers this month -->
+  <div class="panel" style="margin-bottom:16px">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-hash" style="color:#3b82f6"></i>SR Numbers assigned <span id="rpt-sr-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+    </div>
+    <table><thead><tr><th>Item</th><th>SR Number</th><th>Status</th><th>Assigned to</th><th>Assigned date</th></tr></thead>
+    <tbody id="rpt-sr-body"></tbody></table>
+  </div>
+
+  <!-- Software expiring this month -->
+  <div class="panel">
+    <div class="phead">
+      <div class="phead-title"><i class="ti ti-app-window" style="color:#3b82f6"></i>Software expiring/due <span id="rpt-sw-cnt" style="font-size:12px;font-weight:400;color:#64748b;margin-left:4px"></span></div>
+    </div>
+    <table><thead><tr><th>Software</th><th>Version</th><th>Due date</th><th>Days left</th><th>Status</th></tr></thead>
+    <tbody id="rpt-sw-body"></tbody></table>
+  </div>
+</div>
+
+</div><!-- /page -->
+</div><!-- /main -->
+</div><!-- /wrap -->
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700" id="modal-title"></div>
+      <button class="btn ico" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API='https://script.google.com/macros/s/AKfycbzm2RUBkPMuFzOnH3V1B3IjIowRvliL4EItO_glRTsdFr1iw-daPLZ2PdtY1jl8iYvv/exec';
+const CATS=['Keyboard','Mouse','Motherboard','CPU','Fan','Monitor','RAM','SSD','Headset','Webcam','UPS','Network Switch'];
+const DEPTC={'Engineering':['#dbeafe','#1e40af'],'Design':['#fce7f3','#9d174d'],'HR':['#fef9c3','#854d0e'],'Finance':['#dcfce7','#166534'],'Operations':['#d1fae5','#065f46'],'IT':['#f3f4f6','#374151'],'Marketing':['#ede9fe','#5b21b6']};
+const AVB=['#dbeafe','#d1fae5','#fef9c3','#fce7f3','#dcfce7','#ede9fe'];
+const AVT=['#1e40af','#065f46','#854d0e','#9d174d','#166534','#5b21b6'];
+
+let items=[],assignments=[],people=[],procurements=[],srNums=[];
+let editId=null,mPerson=null,mPSearch='',mAddForm=false;
+
+/* ── HELPERS ── */
+function S(id){return document.getElementById(id)}
+function ini(n){return(n||'?').split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2)}
+function avB(n){return AVB[(n||'A').charCodeAt(0)%6]}
+function avT(n){return AVT[(n||'A').charCodeAt(0)%6]}
+function circ(n,s){s=s||24;return`<div class="circ" style="width:${s}px;height:${s}px;background:${avB(n)};color:${avT(n)};font-size:${s<=26?10:12}px">${ini(n)}</div>`}
+function fd(d){
+  if(!d||d==='')return'-';
+  const s=String(d);
+  // Handle full timestamp like "Wed May 06 2026 00:00:00 GMT+0530..."
+  if(s.includes('GMT')||s.includes('UTC')||s.includes('00:00:00')){
+    const dt=new Date(s);
+    if(!isNaN(dt.getTime())){
+      const dd=String(dt.getDate()).padStart(2,'0');
+      const mm=String(dt.getMonth()+1).padStart(2,'0');
+      const yy=String(dt.getFullYear()).slice(2);
+      return`${dd}/${mm}/${yy}`;
+    }
+  }
+  // Handle YYYY-MM-DD
+  const p=s.split('-');
+  if(p.length===3&&p[0].length===4)return`${p[2]}/${p[1]}/${p[0].slice(2)}`;
+  return s;
+}
+function dc(d,ic){return`<span class="dc"><i class="ti ti-${ic}" style="font-size:10px"></i>${fd(d)}</span>`}
+function today(){return new Date().toISOString().slice(0,10)}
+function gid(p){return p+Date.now()+'_'+Math.random().toString(36).slice(2,5)}
+function tbadge(t){if(t==='external')return`<span class="badge pu">Ext</span>`;if(t==='visitor')return`<span class="badge t">Visitor</span>`;return`<span class="badge b">Employee</span>`}
+function ttag(t){if(t==='external')return`<span class="ptag tx">External</span>`;if(t==='visitor')return`<span class="ptag tv">Visitor</span>`;return`<span class="ptag te">Employee</span>`}
+function toast(msg,c){const t=S('toast');t.textContent=msg;t.style.background=c||'#1a1a1a';t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3000)}
+function spill(cls,msg){S('spill').className='pill '+cls;S('spill-txt').textContent=msg}
+function nasgn(iid){return assignments.filter(a=>String(a.item_id)===String(iid)&&a.status==='Active').length}
+function rem(item){return Number(item.qty_in_stock||0)-nasgn(item.id)}
+function sstat(item){const r=rem(item);if(r<=0)return{l:'Out of stock',c:'r'};if(r<=3)return{l:'Low stock',c:'y'};return{l:'In stock',c:'g'}}
+
+/* ── API ── */
+async function apiFetch(sheet){
+  const r=await fetch(`${API}?sheet=${encodeURIComponent(sheet)}&_=${Date.now()}`);
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.status!=='ok')throw new Error(j.message||'API error');
+  return j.data||[];
+}
+async function apiPost(payload){
+  const r=await fetch(API,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain'}});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const j=await r.json();
+  if(j.status!=='ok')throw new Error(j.message||'API error');
+  return j;
+}
+
+/* ── SYNC ── */
+async function syncAll(){
+  spill('sync','Syncing...');
+  S('sync-lbl').textContent='Loading from Google Sheets...';
+  try{
+    const[ri,ra,rp,rpo,rsr,rlt,rlh,rsy,rsw,rbl]=await Promise.all([
+      apiFetch('Items'),apiFetch('Assignments'),apiFetch('People'),
+      apiFetch('Procurement'),apiFetch('SR_Numbers').catch(()=>[]),
+      apiFetch('Laptops').catch(()=>[]),apiFetch('Laptop_History').catch(()=>[]),
+      apiFetch('Systems').catch(()=>[]),apiFetch('Software').catch(()=>[]),apiFetch('Bills').catch(()=>[])
+    ]);
+    items=ri.map(r=>({...r,id:String(r.id||'')}));
+    assignments=ra.map(r=>({...r,id:String(r.id||'')}));
+    people=rp.map(r=>({...r,id:String(r.id||'')}));
+    procurements=rpo.map(r=>({...r,id:String(r.id||'')}));
+    srNums=rsr.map(r=>({...r,sr_id:String(r.sr_id||'')}));
+    laptops=rlt.map(r=>({
+      id:String(r.id||r.ID||''),
+      name:r.name||r.Name||'',
+      brand:r.brand||r.Brand||'',
+      model:r.model||r.Model||'',
+      serial:r.serial||r.Serial||'',
+      processor:r.processor||r.Processor||r.cpu||r.CPU||'',
+      ram:r.ram||r.RAM||r.Ram||'',
+      storage:r.storage||r.Storage||'',
+      os:r.os||r.OS||r.Os||'',
+      purchased_on:r.purchased_on||r.purchased||'',
+      warranty_until:r.warranty_until||r.warranty||'',
+      notes:r.notes||r.Notes||'',
+      status:r.status||r.Status||'Available',
+      assigned_to:r.assigned_to||r.assignedTo||r.assigned_to||''
+    }));
+    laptopHistory=rlh.map(r=>({
+      id:String(r.id||r.ID||''),
+      laptop_id:String(r.laptop_id||r.laptopId||''),
+      laptop_name:r.laptop_name||r.laptopName||'',
+      type:r.type||r.Type||'',
+      details:r.details||r.Details||'',
+      date:r.date||r.Date||'',
+      performed_by:r.performed_by||r.performedBy||r.by||'',
+      status:r.status||r.Status||'',
+      cost:r.cost||r.Cost||'',
+      notes:r.notes||r.Notes||''
+    }));
+    systems=rsy.map(r=>({
+      id:String(r.id||''),
+      tag:r.tag||r.Tag||'',
+      name:r.name||r.Name||'',
+      type:r.type||r.Type||'Desktop',
+      brand:r.brand||r.Brand||'',
+      model:r.model||r.Model||'',
+      serial:r.serial||r.Serial||'',
+      block:r.block||r.Block||'',
+      status:r.status||r.Status||'Active',
+      notes:r.notes||r.Notes||''
+    }));
+    software=rsw.map(r=>({
+      id:String(r.id||''),
+      name:r.name||r.Name||'',
+      version:r.version||r.Version||'',
+      installed_date:r.installed_date||r.installedDate||'',
+      due_date:r.due_date||r.dueDate||'',
+      status:r.status||r.Status||'Active'
+    }));
+    bills=rbl.map(r=>({
+      id:String(r.id||''),
+      po_id:r.po_id||r.poId||'',
+      file_name:r.file_name||r.fileName||'',
+      file_type:r.file_type||r.fileType||'',
+      file_size:r.file_size||r.fileSize||'',
+      file_url:r.file_url||r.fileUrl||'',
+      uploaded_on:r.uploaded_on||r.uploadedOn||''
+    }));
+    spill('ok','Connected - Google Sheets');
+    S('sync-lbl').textContent='Synced at '+new Date().toLocaleTimeString();
+    S('err-box').innerHTML='';
+    // Set overview BEFORE drawing
+    var TABS=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+    function showTab(name){for(var i=0;i<TABS.length;i++){var e=document.getElementById('tab-'+TABS[i]);if(e)e.style.display=(TABS[i]===name)?'block':'none';}}
+    showTab('overview');
+    document.querySelectorAll('.sitem').forEach(function(b){b.classList.remove('on');});
+    var ovBtn=document.querySelector('.sitem[onclick*=overview]');if(ovBtn)ovBtn.classList.add('on');
+    drawAll();
+    // Restore overview AFTER drawing too (in case drawAll changes anything)
+    showTab('overview');
+    toast('Loaded from Google Sheets','#166534');
+  }catch(e){
+    spill('err','Connection failed');
+    S('sync-lbl').textContent='Could not connect';
+    S('err-box').innerHTML=`<div style="background:#fef9c3;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px"><strong>Connection error:</strong> ${e.message}</div>`;
+    toast('Connection failed: '+e.message,'#991b1b');
+  }
+}
+
+/* ── DRAW ALL ── */
+function drawAll(){
+  drawMetrics();
+  drawCat();
+  drawStock();
+  drawAssignments();
+  drawEmployees();
+  drawProcurement();
+  drawSR();
+  // Only draw these if their tab is visible
+  var lt=document.getElementById('tab-laptops');
+  if(lt&&lt.style.display==='block')drawLaptops();
+  var sy=document.getElementById('tab-systems');
+  if(sy&&sy.style.display==='block')drawSystems();
+  var sw=document.getElementById('tab-software');
+  if(sw&&sw.style.display==='block')drawSoftware();
+  var bl=document.getElementById('tab-bills');
+  if(bl&&bl.style.display==='block')drawBills();
+  var rp=document.getElementById('tab-reports');
+  if(rp&&rp.style.display==='block')drawReports();
+}
+
+function drawMetrics(){
+  const ac=assignments.filter(a=>a.status==='Active').length;
+  S('m1').textContent=items.reduce((s,i)=>s+Number(i.qty_procured||0),0);
+  S('m2').textContent=items.reduce((s,i)=>s+Number(i.qty_in_stock||0),0);
+  S('m3').textContent=ac;
+  S('m4').textContent=new Set(assignments.filter(a=>a.status==='Active').map(a=>a.person_id)).size;
+  S('m5').textContent=items.filter(i=>rem(i)<=3).length;
+  const nb=S('nb-a');nb.textContent=ac;nb.style.display=ac?'':'none';
+}
+
+function drawCat(){
+  // Group items by category, show each item individually
+  let h='';
+  if(!items.length){h='<tr><td colspan="7" class="empty">No items yet - click Add item</td></tr>';}
+  // Sort items by category then name
+  const sorted=[...items].sort((a,b)=>(a.category||'').localeCompare(b.category||'')||(a.name||'').localeCompare(b.name||''));
+  sorted.forEach(i=>{
+    const a=nasgn(i.id),r=rem(i),st=sstat(i);
+    const pct=Number(i.qty_in_stock||0)>0?Math.round((r/Number(i.qty_in_stock))*100):0;
+    const col=pct>50?'#22c55e':pct>20?'#f59e0b':'#ef4444';
+    const sc=pct>50?'g':pct>20?'y':'r';
+    h+=`<tr>
+    <td><strong>${i.name||''}</strong></td>
+    <td><span class="badge b">${i.category||''}</span></td>
+    <td>${i.qty_procured||0}</td>
+    <td>${i.qty_in_stock||0}</td>
+    <td style="color:#4338ca;font-weight:700">${a}</td>
+    <td><div style="display:flex;align-items:center;gap:6px"><div class="bar2"><div class="bar2fill" style="width:${Math.min(pct,100)}%;background:${col}"></div></div><span style="font-size:11px;color:#6b7280">${pct}%</span></div></td>
+    <td><span class="badge ${sc}">${st.l}</span></td></tr>`;
+  });
+  S('cat-body').innerHTML=h;
+}
+
+function drawStock(){
+  const cf=S('sf-cat').value,sf=(S('sf-q').value||'').toLowerCase();
+  if(S('sf-cat').options.length<=1){[...new Set(items.map(i=>i.category||'').filter(Boolean))].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;S('sf-cat').appendChild(o)})}
+  const vis=items.filter(i=>(!cf||(i.category||'')===cf)&&(!sf||[i.name||'',i.category||'',i.model||'',i.serial||''].join(' ').toLowerCase().includes(sf)));
+  S('stk-cnt').textContent=`(${vis.length})`;
+  let h='';
+  if(!vis.length){h='<tr><td colspan="11" class="empty">No items found</td></tr>';}
+  vis.forEach(i=>{
+    const a=nasgn(i.id),r=rem(i),st=sstat(i);const pct=Number(i.qty_in_stock||0)>0?Math.round((r/Number(i.qty_in_stock))*100):0;const col=r>3?'#22c55e':r>0?'#f59e0b':'#ef4444';
+    const isr=srNums.filter(s=>String(s.item_id)===String(i.id)&&(s.item_id||'').trim()!=='');
+    const srhtml=isr.length?isr.map(s=>`<span style="font-size:10px;padding:1px 5px;border-radius:8px;font-weight:600;margin:1px;display:inline-block;background:${s.status==='Assigned'?'#fee2e2':'#dcfce7'};color:${s.status==='Assigned'?'#991b1b':'#166534'}">${s.sr_number||''}</span>`).join(''):'<span style="color:#9ca3af;font-size:11px">-</span>';
+    h+=`<tr><td><strong>${i.name||''}</strong></td><td><span class="badge b">${i.category||''}</span></td><td style="color:#6b7280">${i.model||''}</td><td style="font-size:11px;color:#6b7280">${i.serial||''}</td><td>${dc(i.procured_on||'','calendar')}</td><td>${i.qty_procured||0}</td><td>${i.qty_in_stock||0}</td><td style="color:#4338ca;font-weight:700">${a}</td>
+    <td><div style="display:flex;align-items:center;gap:5px"><div class="bar2"><div class="bar2fill" style="width:${pct}%;background:${col}"></div></div><strong>${r}</strong></div></td>
+    <td><div style="line-height:1.8">${srhtml}</div></td>
+    <td><span class="badge ${st.c}">${st.l}</span></td></tr>`;
+  });
+  S('stk-body').innerHTML=h;
+}
+
+function drawAssignments(){
+  const lsel=S('af-loc');if(lsel.options.length<=1){[...new Set(assignments.map(a=>a.floor||'').filter(Boolean))].forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;lsel.appendChild(o)})}
+  const sf2=S('af-stat').value,lf=lsel.value,sf=(S('af-q').value||'').toLowerCase();
+  const fil=assignments.filter(a=>(!sf2||a.status===sf2)&&(!lf||a.floor===lf)&&(!sf||[a.person_name||'',a.item_name||'',a.department||'',a.floor||'',a.notes||''].join(' ').toLowerCase().includes(sf)));
+  S('ass-cnt').textContent=`(${fil.length})`;
+  let h='';
+  if(!fil.length){h='<tr><td colspan="10" class="empty">No assignments found</td></tr>';}
+  fil.forEach(a=>{
+    if(editId===a.id){h+=buildEdit(a);return}
+    const sc=a.status==='Active'?'g':'gr';
+    const srbadge=a.sr_number?`<span style="font-size:11px;padding:2px 6px;border-radius:8px;font-weight:600;background:#fef9c3;color:#854d0e">${a.sr_number}</span>`:'-';
+    h+=`<tr><td><strong>${a.item_name||''}</strong></td><td><span class="badge b">${a.category||''}</span></td>
+    <td><div style="display:flex;align-items:center;gap:5px">${circ(a.person_name||'')}<span style="font-weight:600">${a.person_name||''}</span></div></td>
+    <td>${tbadge(a.person_type||'employee')}</td>
+    <td><div style="display:flex;flex-direction:column;gap:2px">${a.floor?`<span class="chip"><i class="ti ti-map-pin" style="font-size:10px"></i>${a.floor}</span>`:'-'}${a.room||a.seat?`<span style="font-size:10px;color:#6b7280">${a.room||''}${a.seat?' · '+a.seat:''}</span>`:''}${a.notes?`<span style="font-size:10px;color:#854d0e;font-style:italic">${a.notes}</span>`:''}</div></td>
+    <td>${srbadge}</td><td>${dc(a.assigned_on||'','send')}</td>
+    <td style="font-size:11px;color:#6b7280">${a.return_by?fd(a.return_by):'-'}</td>
+    <td><span class="badge ${sc}">${a.status||''}</span></td>
+    <td><div style="display:flex;gap:3px">
+      <button class="btn ico" onclick="startEdit('${a.id}')" style="color:#1d4ed8"><i class="ti ti-edit"></i></button>
+      ${a.status==='Active'?`<button class="btn ico red" onclick="markReturn('${a.id}')"><i class="ti ti-corner-down-left"></i></button>`:''}
+      <button class="btn ico red" onclick="delAssign('${a.id}')"><i class="ti ti-trash"></i></button>
+    </div></td></tr>`;
+  });
+  S('ass-body').innerHTML=h;
+}
+
+function buildEdit(a){
+  const io=items.map(i=>`<option value="${i.id}"${i.id===a.item_id?' selected':''}>${i.name||''}</option>`).join('');
+  const po=people.map(p=>`<option value="${p.id}"${p.id===a.person_id?' selected':''}>${p.name||''} (${p.type||'employee'})</option>`).join('');
+  const so=['Active','Returned'].map(s=>`<option${s===a.status?' selected':''}>${s}</option>`).join('');
+  const isr=srNums.filter(s=>String(s.item_id)===String(a.item_id)&&(s.status==='Available'||s.sr_number===a.sr_number));
+  const sro=`<option value="">None</option>`+isr.map(s=>`<option value="${s.sr_number}"${s.sr_number===a.sr_number?' selected':''}>${s.sr_number} (${s.status})</option>`).join('');
+  return`<tr style="background:#fffbeb"><td colspan="10" style="padding:10px 12px">
+  <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px">
+    <div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:10px">Editing assignment - saves to Google Sheets</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Item</label><select id="e-item" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px">${io}</select></div>
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Person</label><select id="e-per" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px">${po}</select></div>
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">SR Number</label><select id="e-sr" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px">${sro}</select></div>
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Status</label><select id="e-stat" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px">${so}</select></div>
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Assigned on</label><input type="date" id="e-date" value="${a.assigned_on||''}" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px"></div>
+      <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Return by</label><input type="date" id="e-ret" value="${a.return_by||''}" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px"></div>
+      <div style="grid-column:1/-1"><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Notes</label><input type="text" id="e-notes" value="${a.notes||''}" style="width:100%;font-size:12px;padding:5px 7px;border:1px solid #e5e7eb;border-radius:6px"></div>
+    </div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn sm" onclick="cancelEdit()">Cancel</button>
+      <button class="btn sm blue" onclick="saveEdit('${a.id}')"><i class="ti ti-check" style="font-size:11px"></i> Save</button>
+    </div>
+  </div></td></tr>`;
+}
+
+function startEdit(id){editId=id;drawAssignments()}
+function cancelEdit(){editId=null;drawAssignments()}
+
+async function saveEdit(id){
+  const a=assignments.find(x=>x.id===id);if(!a)return;
+  const iid=S('e-item').value,pid=S('e-per').value,newsr=S('e-sr').value||'',newstat=S('e-stat').value;
+  const item=items.find(i=>i.id===iid)||{},person=people.find(p=>p.id===pid)||{};
+  const row=[id,iid,item.name||a.item_name,item.category||a.category,pid,person.name||a.person_name,person.type||a.person_type||'employee',person.department||a.department||'',person.floor||a.floor||'',person.room||a.room||'',person.seat||a.seat||'',item.procured_on||a.procured_on||'',S('e-date').value,S('e-ret').value||'',newstat,S('e-notes').value||'',newsr];
+  spill('sync','Saving...');
+  try{
+    const all=await apiFetch('Assignments');
+    const ri=all.findIndex(r=>String(r.id)===String(id));
+    if(ri>=0)await apiPost({action:'update',sheet:'Assignments',data:row,rowIndex:ri});
+    else await apiPost({action:'append',sheet:'Assignments',data:row});
+    const oldsr=a.sr_number||'';
+    if(oldsr&&oldsr!==newsr)await updSR(oldsr,iid,'Available','','');
+    if(newsr&&newsr!==oldsr)await updSR(newsr,iid,'Assigned',person.name||'',S('e-date').value);
+    if(newstat==='Returned'&&newsr)await updSR(newsr,iid,'Available','','');
+    Object.assign(a,{item_id:iid,item_name:item.name||a.item_name,category:item.category||a.category,person_id:pid,person_name:person.name||a.person_name,person_type:person.type||a.person_type||'employee',department:person.department||a.department||'',floor:person.floor||a.floor||'',room:person.room||a.room||'',seat:person.seat||a.seat||'',procured_on:item.procured_on||a.procured_on||'',assigned_on:row[12],return_by:row[13],status:newstat,notes:row[15],sr_number:newsr});
+    srNums=await apiFetch('SR_Numbers').catch(()=>srNums);
+    editId=null;drawAll();spill('ok','Saved');toast('Assignment updated','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+async function delAssign(id){
+  if(!confirm('Delete this assignment?'))return;
+  spill('sync','Deleting...');
+  try{
+    const all=await apiFetch('Assignments');
+    const ri=all.findIndex(r=>String(r.id)===String(id));
+    if(ri>=0)await apiPost({action:'delete',sheet:'Assignments',rowIndex:ri});
+    assignments=assignments.filter(a=>a.id!==id);
+    editId=null;drawAll();spill('ok','Deleted');toast('Deleted','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+async function markReturn(id){
+  const a=assignments.find(x=>x.id===id);if(!a)return;
+  spill('sync','Updating...');
+  try{
+    const all=await apiFetch('Assignments');
+    const ri=all.findIndex(r=>String(r.id)===String(id));
+    const row=[id,a.item_id,a.item_name,a.category,a.person_id,a.person_name,a.person_type||'employee',a.department||'',a.floor||'',a.room||'',a.seat||'',a.procured_on||'',a.assigned_on||'',today(),'Returned',a.notes||'',a.sr_number||''];
+    if(ri>=0)await apiPost({action:'update',sheet:'Assignments',data:row,rowIndex:ri});
+    if(a.sr_number)await updSR(a.sr_number,a.item_id,'Available','','');
+    a.status='Returned';a.return_by=today();
+    srNums=await apiFetch('SR_Numbers').catch(()=>srNums);
+    drawAll();spill('ok','Updated');toast('Marked returned','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+async function updSR(srNum,itemId,newStatus,person,date){
+  try{
+    const all=await apiFetch('SR_Numbers');
+    // Match by sr_number AND item_id, or by sr_number alone if item_id is blank
+    let ri=all.findIndex(r=>String(r.sr_number)===String(srNum)&&String(r.item_id)===String(itemId));
+    if(ri<0) ri=all.findIndex(r=>String(r.sr_number)===String(srNum)&&(!r.item_id||r.item_id===''));
+    if(ri>=0){
+      const row=[all[ri].sr_id||'',itemId,all[ri].item_name||'',srNum,newStatus,newStatus==='Assigned'?person:'',newStatus==='Assigned'?date:''];
+      await apiPost({action:'update',sheet:'SR_Numbers',data:row,rowIndex:ri});
+      const loc=srNums.find(s=>s.sr_number===srNum);
+      if(loc){loc.status=newStatus;loc.item_id=itemId;loc.current_person_name=newStatus==='Assigned'?person:'';loc.assigned_date=newStatus==='Assigned'?date:'';}
+    }
+  }catch(e){console.warn('SR update:',e.message)}
+}
+
+function drawTimeline(){
+  const sel=S('tl-sel');
+  if(sel.options.length<=1){items.forEach(i=>{const o=document.createElement('option');o.value=i.id;o.textContent=(i.name||'')+(i.category?' ('+i.category+')':'');sel.appendChild(o)})}
+  const iid=sel.value;if(!iid){S('tl-body').innerHTML='<div class="empty">Select an item above.</div>';return}
+  const item=items.find(i=>i.id===iid);if(!item)return;
+  const po=procurements.find(p=>p.item_id===iid);
+  const iA=assignments.filter(a=>a.item_id===iid).sort((a,b)=>(a.assigned_on||'').localeCompare(b.assigned_on||''));
+  const evs=[];
+  if(po){evs.push({d:po.order_date||'',l:`PO raised - ${po.id}`,s:`${po.qty} from ${po.vendor||''}`,dot:'#f59e0b'});if(po.received_on)evs.push({d:po.received_on,l:'Received',s:`${po.qty} units`,dot:'#22c55e'});}
+  else evs.push({d:item.procured_on||'',l:'Received',s:`${item.qty_procured||0} units`,dot:'#22c55e'});
+  iA.forEach(a=>{const dc2=DEPTC[a.department||'']||['#f3f4f6','#374151'];evs.push({d:a.assigned_on||'',l:`Assigned to ${a.person_name||''}`,s:`${a.department||''}${a.floor?' · '+a.floor:''}${a.sr_number?' · SR:'+a.sr_number:''}`,dot:dc2[0],status:a.status,ret:a.return_by||''});if(a.status==='Returned'&&a.return_by)evs.push({d:a.return_by,l:`Returned by ${a.person_name||''}`,s:'Back in stock',dot:'#9ca3af'});});
+  evs.sort((a,b)=>a.d.localeCompare(b.d));
+  const st=sstat(item);
+  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #f3f4f6"><div style="flex:1"><div style="font-weight:700;font-size:14px">${item.name||''}</div><div style="font-size:12px;color:#6b7280">${item.category||''} · ${item.model||''}</div></div><span class="badge ${st.c}">${st.l}</span></div><div>`;
+  evs.forEach((e,i)=>{const last=i===evs.length-1;
+  h+=`<div style="display:flex;gap:12px;padding:9px 0;border-bottom:1px solid #f3f4f6"><div style="display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0"><div style="width:11px;height:11px;border-radius:50%;margin-top:3px;background:${e.dot};border:2px solid ${e.dot}"></div>${!last?'<div style="width:2px;flex:1;background:#e5e7eb;margin-top:3px"></div>':''}</div><div><div style="font-size:11px;color:#6b7280;font-weight:600">${fd(e.d)}</div><div style="font-size:13px;font-weight:700;margin:2px 0">${e.l}${e.status==='Active'?` <span class="badge g" style="vertical-align:2px">Active</span>`:e.status==='Returned'?` <span class="badge gr" style="vertical-align:2px">Returned</span>`:''}</div><div style="font-size:11px;color:#6b7280">${e.s}${e.ret&&e.status==='Active'?' · Return by '+fd(e.ret):''}</div></div></div>`;});
+  S('tl-body').innerHTML=h+'</div>';
+}
+
+function drawEmployees(){
+  const dsel=S('ef-dept');if(dsel.options.length<=1){[...new Set(people.map(p=>p.department||'').filter(Boolean))].forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;dsel.appendChild(o)})}
+  const df=dsel.value,tf=S('ef-type').value,sf=(S('ef-q').value||'').toLowerCase();
+  const fil=people.filter(p=>(!df||(p.department||'')===df)&&(!tf||(p.type||'employee')===tf)&&(!sf||[p.name||'',p.role||'',p.department||'',p.floor||''].join(' ').toLowerCase().includes(sf)));
+  let h='';
+  if(!fil.length)h='<div class="empty" style="grid-column:1/-1">No people found</div>';
+  fil.forEach(p=>{
+    const pA=assignments.filter(a=>a.person_id===p.id&&a.status==='Active');const dc2=DEPTC[p.department||'']||['#f3f4f6','#374151'];
+    h+=`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">${circ(p.name||'',32)}<div><div style="font-weight:700;font-size:13px">${p.name||''}</div><div style="font-size:11px;color:#6b7280">${p.role||'-'}</div></div></div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${p.department?`<span class="badge" style="background:${dc2[0]};color:${dc2[1]}">${p.department}</span>`:''}${p.floor?`<span class="chip"><i class="ti ti-building" style="font-size:10px"></i>${p.floor}</span>`:''}${tbadge(p.type||'employee')}</div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:7px"><div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:5px;text-transform:uppercase">Equipment (${pA.length})</div>
+    ${pA.length?pA.map(a=>`<div style="padding:3px 0;border-bottom:1px solid #f3f4f6"><div style="font-size:12px;font-weight:600"><span class="badge b" style="margin-right:3px">${a.category||''}</span>${a.item_name||''}</div></div>`).join(''):'<div style="font-size:12px;color:#9ca3af;font-style:italic">No equipment</div>'}</div></div>`;
+  });
+  S('emp-grid').innerHTML=h;
+}
+
+function drawProcurement(){
+  let h='';
+  if(!procurements.length)h='<tr><td colspan="8" class="empty">No records - click Add PO</td></tr>';
+  procurements.forEach(p=>{
+    const sc=p.status==='Received'?'g':p.status==='Pending'?'y':'r';
+    h+=`<tr><td><strong>${p.id||''}</strong></td><td>${p.item_name||p.item||''}</td><td><span class="badge b">${p.category||''}</span></td><td>${p.qty||0}</td><td style="color:#6b7280">${p.vendor||''}</td><td>${dc(p.order_date||'','clipboard')}</td><td>${p.received_on?dc(p.received_on,'truck'):'-'}</td><td><span class="badge ${sc}">${p.status||''}</span></td></tr>`;
+  });
+  S('po-body').innerHTML=h;
+}
+
+function drawSR(){
+  const isel=S('sr-item'),ssel=S('sr-stat');
+  while(isel.options.length>1)isel.remove(1);
+  [...new Set(srNums.map(s=>s.item_id).filter(Boolean))].forEach(iid=>{
+    const item=items.find(i=>String(i.id)===String(iid));
+    const o=document.createElement('option');o.value=iid;o.textContent=item?item.name:iid;isel.appendChild(o);
+  });
+  const ifil=isel.value,sfil=ssel.value,qfil=(S('sr-q').value||'').toLowerCase();
+  const fil=srNums.filter(s=>(!ifil||String(s.item_id)===String(ifil))&&(!sfil||(s.status||'Available')===sfil)&&(!qfil||[s.sr_number||'',s.item_name||'',s.current_person_name||''].join(' ').toLowerCase().includes(qfil)));
+  S('sr-cnt').textContent=`(${srNums.length} total, ${fil.length} shown)`;
+  let h='';
+  if(srNums.length===0){
+    h='<tr><td colspan="7" class="empty">No SR numbers yet - add items with SR numbers using the Add item button</td></tr>';
+  } else if(fil.length===0){
+    h='<tr><td colspan="7" class="empty">No results - clear filters to see all</td></tr>';
+  } else {
+    fil.forEach((s,i)=>{
+      const assigned=(s.status||'Available')==='Assigned';
+      const hist=assignments.filter(a=>String(a.sr_number)===String(s.sr_number)&&String(a.item_id)===String(s.item_id));
+      const histhtml=hist.length?hist.map(a=>`<span style="font-size:10px;background:#f3f4f6;padding:1px 5px;border-radius:6px;margin:1px;display:inline-block">${a.person_name||''}${a.status==='Active'?' (active)':''}</span>`).join(''):'<span style="font-size:11px;color:#9ca3af">Never assigned</span>';
+      h+=`<tr>
+      <td style="color:#9ca3af;font-size:11px">${i+1}</td>
+      <td><strong>${s.item_name||''}</strong></td>
+      <td><span style="font-family:monospace;font-size:12px;font-weight:700;background:#f3f4f6;padding:2px 7px;border-radius:5px">${s.sr_number||''}</span></td>
+      <td><span class="badge ${assigned?'r':'g'}">${s.status||'Available'}</span></td>
+      <td>${assigned&&s.current_person_name?`<div style="display:flex;align-items:center;gap:5px">${circ(s.current_person_name,20)}<span style="font-size:12px">${s.current_person_name}</span></div>`:'-'}</td>
+      <td style="font-size:11px;color:#6b7280">${s.assigned_date?fd(s.assigned_date):'-'}</td>
+      <td>${histhtml}</td></tr>`;
+    });
+  }
+  S('sr-body').innerHTML=h;
+}
+
+/* ── PERSON SELECTOR ── */
+function buildPersonSel(selId,search,showForm){
+  const q=(search||'').toLowerCase();
+  const fil=people.filter(p=>!q||[p.name||'',p.department||'',p.role||'',p.floor||''].join(' ').toLowerCase().includes(q));
+  let lh='';
+  if(!people.length)lh='<div class="empty">No people yet - add one below</div>';
+  fil.forEach(p=>{const isSel=selId===p.id;const nm=p.name||'';lh+=`<div class="aitem${isSel?' sel':''}" onclick="mSel('${p.id}')">${circ(nm,24)}<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600">${nm}</div><div style="font-size:11px;color:#6b7280">${p.role||''}${p.department?' · '+p.department:''}${p.floor?' · '+p.floor:''}</div></div>${ttag(p.type||'employee')}${isSel?`<i class="ti ti-check" style="color:#1d4ed8"></i>`:''}</div>`;});
+  if(!fil.length&&q)lh='<div class="empty">No match - add below</div>';
+  const af=showForm?`<div class="nform"><div style="font-size:12px;font-weight:700;color:#854d0e;margin-bottom:8px">Add new person - saves to People sheet</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:7px">
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Full name *</label><input type="text" id="np-n" class="fi2" placeholder="e.g. Pankaj"></div>
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Role</label><input type="text" id="np-r" class="fi2" placeholder="e.g. Engineer"></div>
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Department</label><input type="text" id="np-d" class="fi2" placeholder="e.g. IT" list="dl-d"><datalist id="dl-d"><option>Engineering</option><option>HR</option><option>Finance</option><option>IT</option><option>Marketing</option><option>Operations</option></datalist></div>
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Floor</label><input type="text" id="np-f" class="fi2" placeholder="e.g. Floor 2"></div>
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Room</label><input type="text" id="np-rm" class="fi2" placeholder="e.g. IT Lab"></div>
+    <div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:2px">Seat</label><input type="text" id="np-s" class="fi2" placeholder="e.g. S-101"></div>
+  </div>
+  <div style="margin-bottom:8px"><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px">Type</label>
+  <div style="display:flex;gap:10px"><label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px"><input type="radio" name="np-t" value="employee" checked> Employee</label><label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px"><input type="radio" name="np-t" value="external"> External</label><label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px"><input type="radio" name="np-t" value="visitor"> Visitor</label></div></div>
+  <div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn sm" onclick="mCancel()">Cancel</button><button class="btn sm blue" onclick="mAdd()">Add & select</button></div></div>`:'';
+  const prev=selId?people.find(p=>p.id===selId):null;
+  const ph=prev&&!showForm?`<div class="aprev">${circ(prev.name||'',26)}<div style="flex:1"><div style="font-size:12px;font-weight:700">${prev.name||''}</div><div style="font-size:11px;color:#6b7280">${prev.role||''}${prev.department?' · '+prev.department:''}${prev.floor?' · '+prev.floor:''}</div></div>${ttag(prev.type||'employee')}<button style="border:none;background:none;cursor:pointer;color:#9ca3af" onclick="mClear()"><i class="ti ti-x"></i></button></div>`:'';
+  return`<div class="asel"><div class="asel-top"><i class="ti ti-search"></i><input type="text" placeholder="Search people..." value="${search||''}" oninput="mSearch(this.value)"></div><div class="asel-list">${lh}</div><div class="aadd" onclick="mToggle()"><div style="width:25px;height:25px;background:#ede9fe;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-user-plus" style="font-size:12px;color:#5b21b6"></i></div><div style="flex:1"><div style="font-size:12px;font-weight:600">${showForm?'Close':'Add a different person'}</div><div style="font-size:11px;color:#6b7280">Contractor, visitor, new joiner</div></div><i class="ti ti-chevron-${showForm?'up':'down'}" style="font-size:12px;color:#9ca3af"></i></div>${af}${ph}</div>`;
+}
+function mSel(id){mPerson=id;mPSearch='';mAddForm=false;rPS();rCB()}
+function mSearch(v){mPSearch=v;mAddForm=false;rPS()}
+function mToggle(){mAddForm=!mAddForm;rPS();if(mAddForm)setTimeout(()=>{const e=S('np-n');if(e)e.focus()},50)}
+function mCancel(){mAddForm=false;rPS()}
+function mClear(){mPerson=null;rPS();rCB()}
+function rPS(){const w=S('ps-wrap');if(w)w.innerHTML=buildPersonSel(mPerson,mPSearch,mAddForm)}
+function rCB(){const btn=S('a-confirm');if(!btn)return;const ok=mPerson&&S('a-item')?.value;btn.disabled=!ok;btn.style.opacity=ok?'1':'.5';btn.style.cursor=ok?'pointer':'not-allowed'}
+async function mAdd(){
+  const name=(S('np-n').value||'').trim();if(!name){S('np-n').style.borderColor='#ef4444';S('np-n').focus();return}
+  const type=(document.querySelector('input[name="np-t"]:checked')||{value:'employee'}).value;
+  const np={id:gid('P'),name,role:(S('np-r').value||'').trim(),department:(S('np-d').value||'').trim(),floor:(S('np-f').value||'').trim(),room:(S('np-rm').value||'').trim(),seat:(S('np-s').value||'').trim(),type};
+  spill('sync','Saving person...');
+  try{
+    await apiPost({action:'append',sheet:'People',data:[np.id,np.name,np.role,np.department,np.floor,np.room,np.seat,np.type]});
+    people.push(np);mPerson=np.id;mPSearch='';mAddForm=false;rPS();rCB();spill('ok','Saved');toast(np.name+' added','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+/* ── MODALS ── */
+function openAssign(){
+  mPerson=null;mPSearch='';mAddForm=false;
+  S('modal-title').textContent='New assignment';
+  const io=items.map(i=>`<option value="${i.id}">${i.name||''} - ${i.category||''} (${rem(i)} avail)</option>`).join('')||'<option>No items yet</option>';
+  S('modal-body').innerHTML=`
+  <div class="mrow"><label>Item</label><select id="a-item" style="width:100%" onchange="rCB();updateSRDrop()">${io}</select></div>
+  <div class="mrow"><label>SR Number</label><select id="a-sr" style="width:100%"><option value="">None / Not tracked</option></select><div id="sr-hint" style="font-size:11px;color:#6b7280;margin-top:3px"></div></div>
+  <div class="mrow"><label>Assign to</label><div id="ps-wrap">${buildPersonSel(null,'',false)}</div></div>
+  <div class="mgrid" style="margin-bottom:10px">
+    <div class="mrow" style="margin-bottom:0"><label>Assigned on</label><input id="a-date" type="date" value="${today()}" style="width:100%"></div>
+    <div class="mrow" style="margin-bottom:0"><label>Return by</label><input id="a-ret" type="date" style="width:100%"></div>
+    <div class="mrow" style="margin-bottom:0;grid-column:1/-1"><label>Notes</label><input id="a-notes" type="text" style="width:100%"></div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn blue" id="a-confirm" disabled onclick="saveAssign()" style="opacity:.5;cursor:not-allowed">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+  updateSRDrop();
+}
+function updateSRDrop(){
+  const iid=(S('a-item')||{}).value;const sel=S('a-sr');const hint=S('sr-hint');if(!sel)return;
+  const avail=srNums.filter(s=>String(s.item_id)===String(iid)&&(s.status||'Available')==='Available');
+  const total=srNums.filter(s=>String(s.item_id)===String(iid));
+  sel.innerHTML='<option value="">None / Not tracked</option>'+avail.map(s=>`<option value="${s.sr_number}">${s.sr_number}</option>`).join('');
+  if(hint)hint.textContent=total.length?`${avail.length} available, ${total.length-avail.length} assigned`:'No SR numbers for this item';
+}
+async function saveAssign(){
+  const iid=S('a-item').value,item=items.find(i=>i.id===iid)||{},person=people.find(p=>p.id===mPerson)||{};
+  if(!item.id||!person.id){toast('Select item and person','#991b1b');return}
+  const selsr=(S('a-sr')||{}).value||'',adate=S('a-date').value,id=gid('A');
+  const row=[id,iid,item.name||'',item.category||'',person.id,person.name||'',person.type||'employee',person.department||'',person.floor||'',person.room||'',person.seat||'',item.procured_on||'',adate,S('a-ret').value||'','Active',S('a-notes').value||'',selsr];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Assignments',data:row});
+    if(selsr)await updSR(selsr,iid,'Assigned',person.name||'',adate);
+    assignments.push({id,item_id:iid,item_name:item.name||'',category:item.category||'',person_id:person.id,person_name:person.name||'',person_type:person.type||'employee',department:person.department||'',floor:person.floor||'',room:person.room||'',seat:person.seat||'',procured_on:item.procured_on||'',assigned_on:adate,return_by:row[13],status:'Active',notes:row[15],sr_number:selsr});
+    if(selsr)srNums=await apiFetch('SR_Numbers').catch(()=>srNums);
+    closeModal();drawAll();spill('ok','Saved');toast('Assigned '+item.name+' to '+person.name+(selsr?' SR:'+selsr:''),'#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+function openAddItem(){
+  S('modal-title').textContent='Add inventory item';
+  const opts=CATS.map(c=>`<option>${c}</option>`).join('');
+  S('modal-body').innerHTML=`<div class="mgrid">
+    <div class="mrow"><label>Item name *</label><input id="fi-n" type="text" placeholder="e.g. Logitech MX Keys" style="width:100%" autofocus></div>
+    <div class="mrow"><label>Category</label><select id="fi-c" style="width:100%">${opts}</select></div>
+    <div class="mrow"><label>Model</label><input id="fi-m" type="text" style="width:100%"></div>
+    <div class="mrow"><label>Serial / Tag</label><input id="fi-s" type="text" style="width:100%"></div>
+    <div class="mrow"><label>Procured on</label><input id="fi-pd" type="date" value="${today()}" style="width:100%"></div>
+    <div class="mrow"><label>Qty procured</label><input id="fi-qp" type="number" min="1" value="1" style="width:100%"></div>
+    <div class="mrow"><label>Qty in stock</label><input id="fi-qs" type="number" min="0" value="1" style="width:100%"></div>
+  </div>
+  <div class="mrow"><label>SR Numbers <span style="font-weight:400;text-transform:none;font-size:11px;color:#9ca3af">(one per line)</span></label>
+  <textarea id="fi-sr" rows="4" placeholder="SR-2024-001&#10;SR-2024-002&#10;SR-2024-003" style="width:100%;font-family:inherit;font-size:12px;padding:8px;border:1px solid #e5e7eb;border-radius:7px;resize:vertical"></textarea>
+  <div style="font-size:11px;color:#6b7280;margin-top:3px">Each SR number saved individually to SR_Numbers sheet</div></div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn dark" onclick="saveItem()">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+}
+async function saveItem(){
+  const name=(S('fi-n').value||'').trim();if(!name){toast('Name required','#991b1b');return}
+  const id=gid('I');
+  const row=[id,name,S('fi-c').value,S('fi-m').value||'',S('fi-s').value||'',parseInt(S('fi-qp').value)||1,parseInt(S('fi-qs').value)||1,S('fi-pd').value];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Items',data:row});
+    items.push({id,name,category:row[2],model:row[3],serial:row[4],qty_procured:row[5],qty_in_stock:row[6],procured_on:row[7]});
+    const srtext=(S('fi-sr').value||'').trim();
+    if(srtext){
+      const srlist=srtext.split('\n').map(s=>s.trim()).filter(Boolean);
+      for(const srn of srlist){
+        const sid=gid('SR');
+        await apiPost({action:'append',sheet:'SR_Numbers',data:[sid,id,name,srn,'Available','','']});
+        srNums.push({sr_id:sid,item_id:id,item_name:name,sr_number:srn,status:'Available',current_person_name:'',assigned_date:''});
+      }
+      closeModal();drawAll();spill('ok','Saved');toast(name+' + '+srlist.length+' SR numbers saved','#166534');
+    } else {
+      closeModal();drawAll();spill('ok','Saved');toast(name+' added to Sheets','#166534');
+    }
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+function openAddPO(){
+  S('modal-title').textContent='Add procurement order';
+  const io=items.map(i=>`<option value="${i.id}">${i.name||''}</option>`).join('')||'<option>No items yet</option>';
+  S('modal-body').innerHTML=`<div class="mgrid">
+    <div class="mrow"><label>PO number *</label><input id="po-id" type="text" placeholder="PO-2026-001" style="width:100%"></div>
+    <div class="mrow"><label>Item</label><select id="po-it" style="width:100%">${io}</select></div>
+    <div class="mrow"><label>Quantity</label><input id="po-q" type="number" min="1" value="1" style="width:100%"></div>
+    <div class="mrow"><label>Vendor</label><input id="po-v" type="text" style="width:100%"></div>
+    <div class="mrow"><label>Order date</label><input id="po-od" type="date" value="${today()}" style="width:100%"></div>
+    <div class="mrow"><label>Received on</label><input id="po-rd" type="date" style="width:100%"></div>
+    <div class="mrow" style="grid-column:1/-1"><label>Status</label><select id="po-st" style="width:100%"><option>Pending</option><option>Received</option><option>Cancelled</option></select></div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn dark" onclick="savePO()">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+}
+async function savePO(){
+  const poid=(S('po-id').value||'').trim();if(!poid){toast('PO number required','#991b1b');return}
+  const iid=S('po-it').value,item=items.find(i=>i.id===iid)||{};
+  const row=[poid,iid,item.name||'',item.category||'',parseInt(S('po-q').value)||1,S('po-v').value||'',S('po-od').value,S('po-rd').value||'',S('po-st').value];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Procurement',data:row});
+    procurements.push({id:poid,item_id:iid,item_name:item.name||'',category:item.category||'',qty:row[4],vendor:row[5],order_date:row[6],received_on:row[7],status:row[8]});
+    closeModal();drawAll();spill('ok','Saved');toast('PO '+poid+' saved','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+function closeModal(){S('modal').classList.remove('open');mPerson=null;mPSearch='';mAddForm=false}
+
+let laptops=[],laptopHistory=[];
+
+/* ── LAPTOP FUNCTIONS ── */
+function drawLaptops(){
+  var _lt=document.getElementById('tab-laptops');if(!_lt||_lt.style.display!=='block')return;
+  var el=S('laptop-cards');
+  if(!el)return;
+  var nb=S('nb-lp');
+  if(nb){nb.textContent=laptops.length;nb.style.display=laptops.length?'':'none';}
+  if(!laptops.length){
+    el.innerHTML='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:40px;text-align:center;margin-top:10px"><i class="ti ti-device-laptop" style="font-size:36px;color:#d1d5db;display:block;margin-bottom:10px"></i><div style="font-size:14px;font-weight:500;color:#374151;margin-bottom:8px">No laptops registered yet</div><button class="btn blue" onclick="openAddLaptop()"><i class="ti ti-plus" style="font-size:12px"></i> Add laptop</button></div>';
+    return;
+  }
+  // Use table layout - always renders correctly
+  var h='<div class="panel"><div class="phead"><div class="phead-title"><i class="ti ti-device-laptop" style="color:#3b82f6"></i>Laptops ('+laptops.length+')</div></div>';
+  h+='<table><thead><tr><th>Name</th><th>Brand</th><th>Model</th><th>Serial</th><th>CPU</th><th>RAM</th><th>Storage</th><th>OS</th><th>Purchased</th><th>Warranty</th><th>Status</th><th>Assigned to</th></tr></thead><tbody>';
+  laptops.forEach(function(l){
+    var sc=(l.status||'Available')==='Assigned'?'background:#dbeafe;color:#1e40af':(l.status||'')==='Available'?'background:#dcfce7;color:#166534':'background:#f3f4f6;color:#374151';
+    h+='<tr>';
+    h+='<td><strong>'+(l.name||'')+'</strong></td>';
+    h+='<td style="color:#6b7280">'+(l.brand||'')+'</td>';
+    h+='<td style="color:#6b7280;font-size:11px">'+(l.model||'')+'</td>';
+    h+='<td style="font-family:monospace;font-size:11px">'+(l.serial||'')+'</td>';
+    h+='<td style="font-size:11px">'+(l.processor||'')+'</td>';
+    h+='<td style="font-size:11px">'+(l.ram||'')+'</td>';
+    h+='<td style="font-size:11px">'+(l.storage||'')+'</td>';
+    h+='<td style="font-size:11px">'+(l.os||'')+'</td>';
+    h+='<td>'+dc(l.purchased_on||'','calendar')+'</td>';
+    h+='<td style="font-size:11px;color:#6b7280">'+(l.warranty_until?fd(l.warranty_until):'-')+'</td>';
+    h+='<td><span class="badge" style="'+sc+';padding:2px 7px;border-radius:20px;font-size:11px">'+(l.status||'Available')+'</span></td>';
+    h+='<td style="font-size:11px;color:#6b7280">'+(l.assigned_to||'-')+'</td>';
+    h+='</tr>';
+    // History rows
+    var hist=(laptopHistory||[]).filter(function(x){return String(x.laptop_id)===String(l.id);}).sort(function(a,b){return(b.date||'').localeCompare(a.date||'');});
+    if(hist.length){
+      h+='<tr><td colspan="12" style="padding:0 12px 10px;background:#f9fafb">';
+      h+='<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin:6px 0 4px">History</div>';
+      hist.slice(0,5).forEach(function(e){
+        var tc=e.type==='Assignment'?'background:#dbeafe;color:#1e40af':e.type==='Parts Change'?'background:#fef9c3;color:#854d0e':e.type==='Configuration'?'background:#d1fae5;color:#065f46':'background:#f3f4f6;color:#374151';
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6">';
+        h+='<span style="font-size:10px;padding:1px 6px;border-radius:6px;'+tc+'">'+(e.type||'')+'</span>';
+        h+='<span style="font-size:11px;flex:1">'+(e.details||'')+'</span>';
+        h+='<span style="font-size:11px;color:#9ca3af">'+fd(e.date||'')+'</span>';
+        h+='</div>';
+      });
+      h+='</td></tr>';
+    }
+  });
+  h+='</tbody></table></div>';
+  el.innerHTML=h;
+}
+
+function openAddLaptop(){
+  S('modal-title').textContent='Add laptop';
+  S('modal-body').innerHTML=`
+  <div class="mgrid">
+    <div class="mrow"><label>Laptop name / tag *</label><input id="lt-n" type="text" placeholder="e.g. LAPTOP-001" style="width:100%" autofocus></div>
+    <div class="mrow"><label>Brand</label><input id="lt-br" type="text" placeholder="e.g. Dell, HP, Lenovo" style="width:100%" list="lt-brands"><datalist id="lt-brands"><option>Dell</option><option>HP</option><option>Lenovo</option><option>Asus</option><option>Acer</option><option>Apple</option><option>MSI</option></datalist></div>
+    <div class="mrow"><label>Model</label><input id="lt-m" type="text" placeholder="e.g. Latitude 5520" style="width:100%"></div>
+    <div class="mrow"><label>Serial number</label><input id="lt-s" type="text" placeholder="e.g. ABC123XYZ" style="width:100%"></div>
+    <div class="mrow"><label>Processor (CPU)</label><input id="lt-cpu" type="text" placeholder="e.g. Intel i5-11th Gen" style="width:100%"></div>
+    <div class="mrow"><label>RAM</label><input id="lt-ram" type="text" placeholder="e.g. 8GB DDR4" style="width:100%"></div>
+    <div class="mrow"><label>Storage</label><input id="lt-sto" type="text" placeholder="e.g. 256GB SSD" style="width:100%"></div>
+    <div class="mrow"><label>Operating System</label><input id="lt-os" type="text" placeholder="e.g. Windows 11 Pro" style="width:100%"></div>
+    <div class="mrow"><label>Purchased on</label><input id="lt-pd" type="date" value="${today()}" style="width:100%"></div>
+    <div class="mrow"><label>Warranty until</label><input id="lt-wd" type="date" style="width:100%"></div>
+  </div>
+  <div class="mrow"><label>Notes</label><input id="lt-notes" type="text" placeholder="Any additional notes" style="width:100%"></div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn dark" onclick="saveLaptop()">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+}
+
+async function saveLaptop(){
+  const name=(S('lt-n').value||'').trim();if(!name){toast('Laptop name required','#991b1b');return}
+  const id=gid('LT');
+  const row=[id,name,S('lt-br').value||'',S('lt-m').value||'',S('lt-s').value||'',S('lt-cpu').value||'',S('lt-ram').value||'',S('lt-sto').value||'',S('lt-os').value||'',S('lt-pd').value||'',S('lt-wd').value||'',S('lt-notes').value||'','Available'];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Laptops',data:row});
+    laptops.push({id,name,brand:row[2],model:row[3],serial:row[4],processor:row[5],ram:row[6],storage:row[7],os:row[8],purchased_on:row[9],warranty_until:row[10],notes:row[11],status:row[12]});
+    closeModal();drawLaptops();spill('ok','Saved');toast('Laptop '+name+' added','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+
+function openAddLaptopHistory(laptopId){
+  const laptop=laptops.find(l=>l.id===laptopId);
+  S('modal-title').textContent='Add history - '+(laptop?laptop.name:'Select laptop');
+  const lopts=laptops.map(l=>`<option value="${l.id}"${l.id===laptopId?' selected':''}>${l.name||l.id} (${l.brand||''} ${l.model||''})</option>`).join('')||'<option>No laptops yet - add one first</option>';
+  S('modal-body').innerHTML=`
+  <div class="mrow"><label>Laptop *</label><select id="lh-lid" style="width:100%">${lopts}</select></div>
+  <div class="mrow"><label>Event type *</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;font-size:12px" onclick="selectEventType('Assignment',this)">
+        <i class="ti ti-send" style="color:#1e40af"></i><div><div style="font-weight:600">Assignment</div><div style="font-size:10px;color:#6b7280">Assign / return laptop</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;font-size:12px" onclick="selectEventType('Parts Change',this)">
+        <i class="ti ti-tool" style="color:#854d0e"></i><div><div style="font-weight:600">Parts Change</div><div style="font-size:10px;color:#6b7280">RAM, SSD, battery etc.</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;font-size:12px" onclick="selectEventType('Configuration',this)">
+        <i class="ti ti-settings" style="color:#065f46"></i><div><div style="font-weight:600">Configuration</div><div style="font-size:10px;color:#6b7280">OS, software, settings</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:7px;cursor:pointer;font-size:12px" onclick="selectEventType('Repair',this)">
+        <i class="ti ti-hammer" style="color:#5b21b6"></i><div><div style="font-weight:600">Repair</div><div style="font-size:10px;color:#6b7280">Sent for repair / fixed</div></div>
+      </label>
+    </div>
+    <input type="hidden" id="lh-type" value="">
+  </div>
+  <div class="mrow"><label>Details *</label><input id="lh-det" type="text" placeholder="e.g. Assigned to Pankaj / RAM upgraded from 8GB to 16GB" style="width:100%"></div>
+  <div class="mgrid">
+    <div class="mrow"><label>Date</label><input id="lh-date" type="date" value="${today()}" style="width:100%"></div>
+    <div class="mrow"><label>Performed by</label><input id="lh-by" type="text" placeholder="e.g. IT Team / Pankaj" style="width:100%"></div>
+    <div class="mrow"><label>Status (for assignments)</label><select id="lh-stat" style="width:100%"><option value="Active">Active</option><option value="Returned">Returned</option><option value="Completed">Completed</option></select></div>
+    <div class="mrow"><label>Cost (if any)</label><input id="lh-cost" type="text" placeholder="e.g. 2500" style="width:100%"></div>
+  </div>
+  <div class="mrow"><label>Notes</label><textarea id="lh-notes" rows="2" style="width:100%;font-family:inherit;font-size:12px;padding:7px 9px;border:1px solid #e5e7eb;border-radius:7px" placeholder="Additional details, vendor name, part numbers etc."></textarea></div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn dark" onclick="saveLaptopHistory()">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+}
+
+function selectEventType(type,el){
+  S('lh-type').value=type;
+  document.querySelectorAll('#modal-body .mrow label[onclick]').forEach(l=>{l.style.border='1px solid #e5e7eb';l.style.background='#fff'});
+  el.style.border='1px solid #1d4ed8';el.style.background='#eff6ff';
+}
+
+async function saveLaptopHistory(){
+  const lid=S('lh-lid').value;
+  const type=S('lh-type').value;
+  const details=(S('lh-det').value||'').trim();
+  if(!lid){toast('Select a laptop','#991b1b');return}
+  if(!type){toast('Select an event type','#991b1b');return}
+  if(!details){toast('Details are required','#991b1b');return}
+  const laptop=laptops.find(l=>l.id===lid)||{};
+  const id=gid('LH');
+  const row=[id,lid,laptop.name||'',type,details,S('lh-date').value||today(),S('lh-by').value||'',S('lh-stat').value||'',S('lh-cost').value||'',S('lh-notes').value||''];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Laptop_History',data:row});
+    laptopHistory.push({id,laptop_id:lid,laptop_name:laptop.name||'',type,details:row[4],date:row[5],performed_by:row[6],status:row[7],cost:row[8],notes:row[9]});
+    // If assignment, update laptop status
+    if(type==='Assignment'){
+      const newStatus=S('lh-stat').value==='Active'?'Assigned':'Available';
+      const all=await apiFetch('Laptops');
+      const ri=all.findIndex(r=>String(r.id)===String(lid));
+      if(ri>=0){
+        const lrow=[lid,laptop.name||'',laptop.brand||'',laptop.model||'',laptop.serial||'',laptop.processor||'',laptop.ram||'',laptop.storage||'',laptop.os||'',laptop.purchased_on||'',laptop.warranty_until||'',laptop.notes||'',newStatus];
+        await apiPost({action:'update',sheet:'Laptops',data:lrow,rowIndex:ri});
+        if(laptops.find(l=>l.id===lid))laptops.find(l=>l.id===lid).status=newStatus;
+      }
+    }
+    closeModal();drawLaptops();spill('ok','Saved');toast('History saved to Sheets','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+let systems=[],sysFilter='all';
+
+function drawSystems(){
+  var _sy=document.getElementById('tab-systems');if(!_sy||_sy.style.display!=='block')return;
+  // Badge
+  const nb=S('nb-sys');if(nb){nb.textContent=systems.length;nb.style.display=systems.length?'':'none';}
+  if(!systems.length){
+    const b=S('sys-body');if(b)b.innerHTML='<tr><td colspan="9" class="empty">No systems yet - click Add system to register one</td></tr>';
+    const m=S('sys-metrics');if(m)m.innerHTML='';
+    const bk=S('sys-blocks');if(bk)bk.innerHTML='';
+    return;
+  }
+  const q=(S('sys-q')?S('sys-q').value||'':'').toLowerCase();
+  const b1=systems.filter(s=>s.block==='Block 1');
+  const b2=systems.filter(s=>s.block==='Block 2');
+  const desktops=systems.filter(s=>s.type==='Desktop');
+  const laptops2=systems.filter(s=>s.type==='Laptop');
+  const inRepair=systems.filter(s=>s.status==='In Repair');
+  // Metrics
+  const m=S('sys-metrics');
+  if(m)m.innerHTML=`
+    <div class="mc"><div class="bar" style="background:#3b82f6"></div><div class="lbl">Total systems</div><div class="val">${systems.length}</div><div class="sub">across 2 blocks</div></div>
+    <div class="mc"><div class="bar" style="background:#1d4ed8"></div><div class="lbl">Block 1</div><div class="val" style="color:#1d4ed8">${b1.length}</div><div class="sub">${b1.filter(s=>s.type==='Desktop').length} desktop · ${b1.filter(s=>s.type==='Laptop').length} laptop</div></div>
+    <div class="mc"><div class="bar" style="background:#3B6D11"></div><div class="lbl">Block 2</div><div class="val" style="color:#3B6D11">${b2.length}</div><div class="sub">${b2.filter(s=>s.type==='Desktop').length} desktop · ${b2.filter(s=>s.type==='Laptop').length} laptop</div></div>
+    <div class="mc"><div class="bar" style="background:#f59e0b"></div><div class="lbl">Desktops</div><div class="val">${desktops.length}</div><div class="sub">${laptops2.length} laptops</div></div>
+    <div class="mc"><div class="bar" style="background:#ef4444"></div><div class="lbl">In repair</div><div class="val" style="color:#854d0e">${inRepair.length}</div><div class="sub">needs attention</div></div>`;
+  // Block cards
+  const bk=S('sys-blocks');
+  if(bk){
+    const blockCard=(blk,data,col,bg)=>{
+      const dt=data.filter(s=>s.type==='Desktop').length;
+      const lt=data.filter(s=>s.type==='Laptop').length;
+      const ac=data.filter(s=>s.status==='Active').length;
+      const ir=data.filter(s=>s.status==='In Repair').length;
+      const pctDt=data.length>0?Math.round((dt/data.length)*100):0;
+      const pctLt=data.length>0?Math.round((lt/data.length)*100):0;
+      return`<div class="panel">
+        <div class="phead"><div class="phead-title"><span style="width:10px;height:10px;border-radius:50%;background:${bg};border:2px solid ${col};display:inline-block;margin-right:4px"></span>${blk}</div><div style="font-size:22px;font-weight:500;color:${col}">${data.length}</div></div>
+        <div style="padding:8px 14px;border-bottom:0.5px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b7280"><i class="ti ti-device-desktop" aria-hidden="true"></i>Desktops</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500">${dt}</span><div style="width:60px;height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden"><div style="width:${pctDt}%;height:5px;background:${col};border-radius:4px"></div></div></div></div>
+        <div style="padding:8px 14px;border-bottom:0.5px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b7280"><i class="ti ti-device-laptop" aria-hidden="true"></i>Laptops</span><div style="display:flex;align-items:center;gap:8px"><span style="font-size:13px;font-weight:500">${lt}</span><div style="width:60px;height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden"><div style="width:${pctLt}%;height:5px;background:${col};border-radius:4px"></div></div></div></div>
+        <div style="padding:8px 14px;border-bottom:0.5px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b7280"><i class="ti ti-check" aria-hidden="true"></i>Active</span><span style="font-size:13px;font-weight:500;color:#166534">${ac}</span></div>
+        <div style="padding:8px 14px;display:flex;align-items:center;justify-content:space-between"><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6b7280"><i class="ti ti-tool" aria-hidden="true"></i>In repair</span><span style="font-size:13px;font-weight:500;color:#854d0e">${ir}</span></div>
+      </div>`;
+    };
+    bk.innerHTML=blockCard('Block 1',b1,'#1d4ed8','#dbeafe')+blockCard('Block 2',b2,'#3B6D11','#EAF3DE');
+  }
+  // Table
+  const filtered=systems.filter(s=>{
+    const mf=sysFilter==='all'||(sysFilter==='Block 1'&&s.block==='Block 1')||(sysFilter==='Block 2'&&s.block==='Block 2')||(sysFilter==='Desktop'&&s.type==='Desktop')||(sysFilter==='Laptop'&&s.type==='Laptop');
+    const qf=!q||[s.tag||'',s.name||'',s.brand||'',s.model||'',s.block||'',s.notes||''].join(' ').toLowerCase().includes(q);
+    return mf&&qf;
+  });
+  const cnt=S('sys-cnt');if(cnt)cnt.textContent=`(${filtered.length} of ${systems.length})`;
+  let h='';
+  if(!filtered.length)h='<tr><td colspan="9" class="empty">No systems match filter</td></tr>';
+  filtered.forEach(s=>{
+    const bc=s.block==='Block 1'?'background:#dbeafe;color:#1e40af':'background:#EAF3DE;color:#3B6D11';
+    const tc=s.type==='Laptop'?'background:#ede9fe;color:#5b21b6':'background:#f3f4f6;color:#374151';
+    const sc=s.status==='Active'?'background:#dcfce7;color:#166534':s.status==='In Repair'?'background:#fef9c3;color:#854d0e':'background:#fee2e2;color:#991b1b';
+    const ico=s.type==='Laptop'?'ti-device-laptop':'ti-device-desktop';
+    h+=`<tr>
+      <td><span style="font-family:monospace;font-size:11px;font-weight:700;background:#f3f4f6;padding:2px 7px;border-radius:4px">${s.tag||''}</span></td>
+      <td style="font-weight:500">${s.name||''}</td>
+      <td><span class="badge" style="${tc};padding:2px 7px;border-radius:20px;font-size:11px;font-weight:500"><i class="ti ${ico}" style="font-size:11px" aria-hidden="true"></i> ${s.type||''}</span></td>
+      <td><span class="badge" style="${bc};padding:2px 7px;border-radius:20px;font-size:11px;font-weight:500">${s.block||''}</span></td>
+      <td style="color:#6b7280">${s.brand||''}</td>
+      <td style="color:#6b7280;font-size:11px">${s.model||''}</td>
+      <td style="font-size:11px;color:#6b7280">${s.serial||''}</td>
+      <td style="font-size:11px;color:#6b7280">${s.notes||'-'}</td>
+      <td><span class="badge" style="${sc};padding:2px 7px;border-radius:20px;font-size:11px;font-weight:500">${s.status||'Active'}</span></td>
+    </tr>`;
+  });
+  const sb=S('sys-body');if(sb)sb.innerHTML=h;
+}
+
+function filterSys(f,btn){
+  sysFilter=f;
+  ['sf-all','sf-b1','sf-b2','sf-dt','sf-lt'].forEach(id=>{const el=S(id);if(el){el.style.background='transparent';el.style.color='#374151';el.style.borderColor='#e5e7eb';}});
+  if(btn){btn.style.background='#1d4ed8';btn.style.color='#fff';btn.style.borderColor='#1d4ed8';}
+  drawSystems();
+}
+
+function openAddSystem(){
+  S('modal-title').textContent='Add system';
+  S('modal-body').innerHTML=`<div class="mgrid">
+    <div class="mrow"><label>System tag *</label><input id="sys-tag" type="text" placeholder="e.g. PC-BLOCK1-07" style="width:100%" autofocus></div>
+    <div class="mrow"><label>Name</label><input id="sys-name" type="text" placeholder="e.g. Desktop 7" style="width:100%"></div>
+    <div class="mrow"><label>Type *</label><select id="sys-type" style="width:100%"><option value="Desktop">Desktop</option><option value="Laptop">Laptop</option></select></div>
+    <div class="mrow"><label>Block *</label><select id="sys-block" style="width:100%"><option value="Block 1">Block 1</option><option value="Block 2">Block 2</option></select></div>
+    <div class="mrow"><label>Brand</label><input id="sys-brand" type="text" placeholder="e.g. Dell, HP, Lenovo" style="width:100%" list="brand-list"><datalist id="brand-list"><option>Dell</option><option>HP</option><option>Lenovo</option><option>Asus</option><option>Acer</option><option>Apple</option></datalist></div>
+    <div class="mrow"><label>Model</label><input id="sys-model" type="text" placeholder="e.g. OptiPlex 3080" style="width:100%"></div>
+    <div class="mrow"><label>Serial number</label><input id="sys-serial" type="text" placeholder="e.g. ABC123XYZ" style="width:100%"></div>
+    <div class="mrow"><label>Status</label><select id="sys-status" style="width:100%"><option value="Active">Active</option><option value="In Repair">In Repair</option><option value="Retired">Retired</option></select></div>
+    <div class="mrow" style="grid-column:1/-1"><label>Notes</label><input id="sys-notes" type="text" placeholder="Any additional notes" style="width:100%"></div>
+  </div>
+  <div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn dark" onclick="saveSystem()">Save to Sheets</button></div>`;
+  S('modal').classList.add('open');
+}
+
+async function saveSystem(){
+  const tag=(S('sys-tag').value||'').trim();if(!tag){toast('Tag is required','#991b1b');return}
+  const id=gid('SYS');
+  const row=[id,tag,S('sys-name').value||'',S('sys-type').value||'Desktop',S('sys-brand').value||'',S('sys-model').value||'',S('sys-serial').value||'',S('sys-block').value||'Block 1',S('sys-status').value||'Active',S('sys-notes').value||''];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Systems',data:row});
+    systems.push({id,tag:row[1],name:row[2],type:row[3],brand:row[4],model:row[5],serial:row[6],block:row[7],status:row[8],notes:row[9]});
+    closeModal();drawSystems();spill('ok','Saved');toast(tag+' added to Systems','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#991b1b')}
+}
+let bills=[];
+
+function drawBills(){
+  var _b=document.getElementById('tab-bills');
+  if(!_b||_b.style.display!=='block')return;
+  var nb=S('nb-bills');if(nb){nb.textContent=bills.length;nb.style.display=bills.length?'':'none';}
+  var q=(S('bill-q')?S('bill-q').value||'':'').toLowerCase();
+  var fil=bills.filter(function(b){
+    return !q||[b.po_id||'',b.file_name||''].join(' ').toLowerCase().includes(q);
+  });
+  var cnt=S('bill-cnt');if(cnt)cnt.textContent='('+fil.length+')';
+  var h='';
+  if(!fil.length){
+    h='<tr><td colspan="6" class="empty">No bills uploaded yet — click Add bill to attach one</td></tr>';
+  } else {
+    fil.forEach(function(b){
+      var icon=b.file_type&&b.file_type.includes('pdf')?'ti-file-type-pdf':'ti-photo';
+      var iconColor=b.file_type&&b.file_type.includes('pdf')?'#dc2626':'#1d4ed8';
+      h+='<tr>'
+        +'<td><strong>'+(b.po_id||'—')+'</strong></td>'
+        +'<td><div style="display:flex;align-items:center;gap:6px"><i class="ti '+icon+'" style="color:'+iconColor+';font-size:16px"></i>'+(b.file_name||'')+'</div></td>'
+        +'<td style="color:#64748b;font-size:11px">'+(b.file_type||'—').toUpperCase()+'</td>'
+        +'<td style="color:#64748b;font-size:11px">'+(b.file_size||'—')+'</td>'
+        +'<td>'+dc(b.uploaded_on||'','calendar')+'</td>'
+        +'<td><div style="display:flex;gap:4px">'
+        +(b.file_url?'<a href="'+b.file_url+'" target="_blank" class="btn ico" title="View/Download" style="color:#1d4ed8"><i class="ti ti-external-link"></i></a>':'')
+        +'<button class="btn ico red" onclick="delBill(\''+b.id+'\')" title="Delete"><i class="ti ti-trash"></i></button>'
+        +'</div></td>'
+        +'</tr>';
+    });
+  }
+  S('bill-body').innerHTML=h;
+}
+
+function openAddBill(poId){
+  S('modal-title').textContent='Add bill / invoice';
+  var poOpts='<option value="">— Select PO (optional) —</option>'+procurements.map(function(p){
+    return'<option value="'+p.id+'"'+(p.id===poId?' selected':'')+'>'+p.id+(p.item_name?' — '+p.item_name:'')+'</option>';
+  }).join('');
+  S('modal-body').innerHTML=
+    '<div class="mrow"><label>PO Number</label><select id="bl-po" style="width:100%">'+poOpts+'</select></div>'
+    +'<div class="mrow"><label>Upload method</label>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">'
+    +'<label id="bl-opt-drive" style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer" onclick="selectBillMethod(\'drive\')">'
+    +'<i class="ti ti-brand-google-drive" style="font-size:20px;color:#1d4ed8"></i><div><div style="font-size:12px;font-weight:600">Google Drive link</div><div style="font-size:10px;color:#64748b">Paste a shared link</div></div></label>'
+    +'<label id="bl-opt-url" style="display:flex;align-items:center;gap:8px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer" onclick="selectBillMethod(\'url\')">'
+    +'<i class="ti ti-link" style="font-size:20px;color:#6d28d9"></i><div><div style="font-size:12px;font-weight:600">Direct URL</div><div style="font-size:10px;color:#64748b">Paste any file URL</div></div></label>'
+    +'</div></div>'
+    +'<div id="bl-input-area" style="margin-top:4px"></div>'
+    +'<div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn blue" onclick="saveBill()">Save to Sheets</button></div>';
+  S('modal').classList.add('open');
+  selectBillMethod('drive');
+}
+
+function selectBillMethod(method){
+  var driveOpt=document.getElementById('bl-opt-drive');
+  var urlOpt=document.getElementById('bl-opt-url');
+  var area=document.getElementById('bl-input-area');
+  if(method==='drive'){
+    if(driveOpt){driveOpt.style.border='1.5px solid #1d4ed8';driveOpt.style.background='#eff6ff';}
+    if(urlOpt){urlOpt.style.border='1px solid #e2e8f0';urlOpt.style.background='#fff';}
+    area.innerHTML='<div class="mrow"><label>Google Drive shared link</label><input id="bl-url" type="text" placeholder="https://drive.google.com/file/d/..." style="width:100%"></div>'
+      +'<div class="mrow"><label>File name</label><input id="bl-name" type="text" placeholder="e.g. Invoice_April2026.pdf" style="width:100%"></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +'<div class="mrow"><label>File type</label><select id="bl-type" style="width:100%"><option value="pdf">PDF</option><option value="jpg">JPG/Image</option><option value="png">PNG</option><option value="other">Other</option></select></div>'
+      +'<div class="mrow"><label>File size (optional)</label><input id="bl-size" type="text" placeholder="e.g. 2.4 MB" style="width:100%"></div></div>';
+    document.getElementById('bl-url').setAttribute('data-method','drive');
+  } else {
+    if(urlOpt){urlOpt.style.border='1.5px solid #6d28d9';urlOpt.style.background='#f5f3ff';}
+    if(driveOpt){driveOpt.style.border='1px solid #e2e8f0';driveOpt.style.background='#fff';}
+    area.innerHTML='<div class="mrow"><label>File URL</label><input id="bl-url" type="text" placeholder="https://example.com/invoice.pdf" style="width:100%"></div>'
+      +'<div class="mrow"><label>File name</label><input id="bl-name" type="text" placeholder="e.g. Invoice_April2026.pdf" style="width:100%"></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+      +'<div class="mrow"><label>File type</label><select id="bl-type" style="width:100%"><option value="pdf">PDF</option><option value="jpg">JPG/Image</option><option value="png">PNG</option><option value="other">Other</option></select></div>'
+      +'<div class="mrow"><label>File size (optional)</label><input id="bl-size" type="text" placeholder="e.g. 2.4 MB" style="width:100%"></div></div>';
+  }
+}
+
+async function saveBill(){
+  var url=(S('bl-url')?S('bl-url').value||'':'').trim();
+  var name=(S('bl-name')?S('bl-name').value||'':'').trim();
+  if(!url){toast('Please enter a URL or link','#dc2626');return;}
+  if(!name){toast('Please enter a file name','#dc2626');return;}
+  var id=gid('BL');
+  var poid=S('bl-po')?S('bl-po').value||'':'';
+  var ftype=S('bl-type')?S('bl-type').value||'pdf':'pdf';
+  var fsize=S('bl-size')?S('bl-size').value||'':'';
+  var row=[id,poid,name,ftype,fsize,url,today()];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Bills',data:row});
+    bills.push({id,po_id:poid,file_name:name,file_type:ftype,file_size:fsize,file_url:url,uploaded_on:row[6]});
+    closeModal();drawBills();drawProcurement();spill('ok','Saved');
+    toast('Bill saved to Sheets','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#dc2626');}
+}
+
+async function delBill(id){
+  if(!confirm('Delete this bill entry?'))return;
+  spill('sync','Deleting...');
+  try{
+    var all=await apiFetch('Bills');
+    var ri=all.findIndex(function(r){return String(r.id)===String(id);});
+    if(ri>=0)await apiPost({action:'delete',sheet:'Bills',rowIndex:ri});
+    bills=bills.filter(function(b){return b.id!==id;});
+    drawBills();drawProcurement();spill('ok','Deleted');toast('Deleted','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#dc2626');}
+}
+
+function drawSoftware(){
+  var _sw=document.getElementById('tab-software');
+  if(!_sw||_sw.style.display!=='block')return;
+  var nb=document.getElementById('nb-sw');
+  if(nb){nb.textContent=software.length;nb.style.display=software.length?'':'none';}
+  // Metrics
+  var today=new Date();today.setHours(0,0,0,0);
+  var active=software.filter(function(s){return(s.status||'Active')==='Active';}).length;
+  var expiring=software.filter(function(s){
+    if(!s.due_date)return false;
+    var d=new Date(s.due_date);var diff=Math.ceil((d-today)/(1000*60*60*24));
+    return diff>=0&&diff<=30;
+  }).length;
+  var expired=software.filter(function(s){
+    if(!s.due_date)return false;
+    return new Date(s.due_date)<today;
+  }).length;
+  var sm=document.getElementById('sw-metrics');
+  if(sm)sm.innerHTML=
+    '<div class="mc"><div class="bar" style="background:#3b82f6"></div><div class="lbl">Total software</div><div class="val">'+software.length+'</div><div class="sub">installed</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#22c55e"></div><div class="lbl">Active</div><div class="val" style="color:#15803d">'+active+'</div><div class="sub">valid licenses</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#f59e0b"></div><div class="lbl">Expiring soon</div><div class="val" style="color:#a16207">'+expiring+'</div><div class="sub">within 30 days</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#ef4444"></div><div class="lbl">Expired</div><div class="val" style="color:#dc2626">'+expired+'</div><div class="sub">needs renewal</div></div>';
+  // Filter
+  var sf=document.getElementById('sw-stat-f')?document.getElementById('sw-stat-f').value:'';
+  var qf=(document.getElementById('sw-q')?document.getElementById('sw-q').value||'':'').toLowerCase();
+  var fil=software.filter(function(s){
+    var mf=!sf||(s.status||'Active')===sf;
+    var qm=!qf||[s.name||'',s.version||''].join(' ').toLowerCase().includes(qf);
+    return mf&&qm;
+  });
+  var cnt=document.getElementById('sw-cnt');
+  if(cnt)cnt.textContent='('+fil.length+' of '+software.length+')';
+  var h='';
+  if(!fil.length){
+    h='<tr><td colspan="8" class="empty">No software found</td></tr>';
+  } else {
+    fil.forEach(function(s,i){
+      // Calculate days left
+      var daysLeft='-';var daysStyle='color:#64748b';var rowStyle='';
+      if(s.due_date){
+        var due=new Date(s.due_date);due.setHours(0,0,0,0);
+        var diff=Math.ceil((due-today)/(1000*60*60*24));
+        if(diff<0){
+          daysLeft='Expired';daysStyle='color:#dc2626;font-weight:700';
+          rowStyle='background:#fff5f5';
+        } else if(diff===0){
+          daysLeft='Today!';daysStyle='color:#dc2626;font-weight:700';
+          rowStyle='background:#fff5f5';
+        } else if(diff<=30){
+          daysLeft=diff+' days';daysStyle='color:#d97706;font-weight:700';
+          rowStyle='background:#fffbeb';
+        } else {
+          daysLeft=diff+' days';daysStyle='color:#15803d';
+        }
+      }
+      var st=s.status||'Active';
+      var sc=st==='Active'?'g':st==='Expiring Soon'?'y':'r';
+      h+='<tr style="'+rowStyle+'">';
+      h+='<td style="color:#94a3b8;font-size:11px">'+(i+1)+'</td>';
+      h+='<td><strong style="color:#0f172a">'+(s.name||'')+'</strong></td>';
+      h+='<td style="color:#64748b;font-size:11px">'+(s.version||'-')+'</td>';
+      h+='<td>'+dc(s.installed_date||'','calendar')+'</td>';
+      h+='<td>'+dc(s.due_date||'','calendar-due')+'</td>';
+      h+='<td style="'+daysStyle+'">'+daysLeft+'</td>';
+      h+='<td><span class="badge '+sc+'">'+st+'</span></td>';
+      h+='<td><button class="btn ico red" onclick="delSoftware(\''+s.id+'\')" title="Delete"><i class="ti ti-trash"></i></button></td>';
+      h+='</tr>';
+    });
+  }
+  var sb=document.getElementById('sw-body');
+  if(sb)sb.innerHTML=h;
+}
+
+function openAddSoftware(){
+  S('modal-title').textContent='Add software';
+  var swHtml='<div class="mgrid">'
+    +'<div class="mrow"><label>Software name *</label><input id="sw-name" type="text" placeholder="e.g. Microsoft Office 365" style="width:100%" autofocus></div>'
+    +'<div class="mrow"><label>Version</label><input id="sw-ver" type="text" placeholder="e.g. 2021, v10.5" style="width:100%"></div>'
+    +'<div class="mrow"><label>Installed date</label><input id="sw-inst" type="date" value="'+today()+'" style="width:100%"></div>'
+    +'<div class="mrow"><label>Due / Renewal date</label><input id="sw-due" type="date" style="width:100%"></div>'
+    +'<div class="mrow" style="grid-column:1/-1"><label>Status</label>'
+    +'<select id="sw-status" style="width:100%"><option value="Active">Active</option><option value="Expiring Soon">Expiring Soon</option><option value="Expired">Expired</option></select>'
+    +'</div></div>'
+    +'<div class="mfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn blue" onclick="saveSoftware()">Save to Sheets</button></div>';
+  S('modal-body').innerHTML=swHtml;
+  S('modal').classList.add('open');
+}
+
+async function saveSoftware(){
+  var name=(S('sw-name').value||'').trim();
+  if(!name){toast('Software name required','#dc2626');return;}
+  var id=gid('SW');
+  var row=[id,name,S('sw-ver').value||'',S('sw-inst').value||'',S('sw-due').value||'',S('sw-status').value||'Active'];
+  spill('sync','Saving...');
+  try{
+    await apiPost({action:'append',sheet:'Software',data:row});
+    software.push({id,name,version:row[2],installed_date:row[3],due_date:row[4],status:row[5]});
+    closeModal();drawSoftware();spill('ok','Saved');
+    toast(name+' added to Software sheet','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#dc2626');}
+}
+
+async function delSoftware(id){
+  if(!confirm('Delete this software entry?'))return;
+  spill('sync','Deleting...');
+  try{
+    var all=await apiFetch('Software');
+    var ri=all.findIndex(function(r){return String(r.id)===String(id);});
+    if(ri>=0)await apiPost({action:'delete',sheet:'Software',rowIndex:ri});
+    software=software.filter(function(s){return s.id!==id;});
+    drawSoftware();spill('ok','Deleted');toast('Deleted','#166534');
+  }catch(e){spill('err','Error');toast('Error: '+e.message,'#dc2626');}
+}
+let rptChart=null;
+
+function drawReports(){
+  var _rpt=document.getElementById('tab-reports');
+  if(!_rpt||_rpt.style.display!=='block')return;
+
+  // Populate year dropdown
+  var yearSel=S('rpt-year');
+  if(yearSel.options.length===0){
+    var years=new Set();
+    assignments.forEach(function(a){
+      if(a.assigned_on){var dt=new Date(a.assigned_on);if(!isNaN(dt.getTime()))years.add(String(dt.getFullYear()));}
+    });
+    procurements.forEach(function(p){
+      if(p.order_date){var dt=new Date(p.order_date);if(!isNaN(dt.getTime()))years.add(String(dt.getFullYear()));}
+    });
+    if(years.size===0)years.add(new Date().getFullYear().toString());
+    var sortedYears=[...years].sort().reverse();
+    sortedYears.forEach(function(y){var o=document.createElement('option');o.value=y;o.textContent=y;yearSel.appendChild(o);});
+  }
+
+  var selYear=parseInt(yearSel.value||new Date().getFullYear().toString());
+  var selMonth=parseInt(S('rpt-month').value||'0')||0;
+
+  // Helper to parse any date format from Google Sheets
+  function parseDate(d){
+    if(!d||d==='')return null;
+    var dt=new Date(d);
+    if(!isNaN(dt.getTime()))return dt;
+    return null;
+  }
+  function matchPeriod(d){
+    var dt=parseDate(d);
+    if(!dt)return false;
+    if(dt.getFullYear()!==selYear)return false;
+    if(selMonth&&(dt.getMonth()+1)!==selMonth)return false;
+    return true;
+  }
+
+  // Filter data
+  var filtA=assignments.filter(function(a){return matchPeriod(a.assigned_on);});
+  var filtP=procurements.filter(function(p){return matchPeriod(p.order_date);});
+  var filtSR=srNums.filter(function(s){return s.status==='Assigned'&&matchPeriod(s.assigned_date);});
+  var today=new Date();today.setHours(0,0,0,0);
+  var filtSW=software.filter(function(s){
+    if(!s.due_date)return false;
+    var dt=parseDate(s.due_date);
+    if(!dt)return false;
+    if(dt.getFullYear()!==selYear)return false;
+    if(selMonth&&(dt.getMonth()+1)!==selMonth)return false;
+    return true;
+  });
+
+  // Metrics
+  var totalQty=filtP.reduce(function(s,p){return s+Number(p.qty||0);},0);
+  var m=S('rpt-metrics');
+  if(m)m.innerHTML=
+    '<div class="mc"><div class="bar" style="background:#3b82f6"></div><div class="lbl">Assignments</div><div class="val">'+filtA.length+'</div><div class="sub">this period</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#22c55e"></div><div class="lbl">Items procured</div><div class="val" style="color:#15803d">'+filtP.length+'</div><div class="sub">'+totalQty+' units</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#6366f1"></div><div class="lbl">SR assigned</div><div class="val" style="color:#4338ca">'+filtSR.length+'</div><div class="sub">this period</div></div>'+
+    '<div class="mc"><div class="bar" style="background:#f59e0b"></div><div class="lbl">SW expiring</div><div class="val" style="color:#a16207">'+filtSW.length+'</div><div class="sub">this period</div></div>';
+
+  // Chart - monthly breakdown for the year
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var aData=new Array(12).fill(0);
+  var pData=new Array(12).fill(0);
+  assignments.forEach(function(a){
+    var dt=parseDate(a.assigned_on);
+    if(dt&&dt.getFullYear()===selYear){var mo=dt.getMonth();if(mo>=0&&mo<12)aData[mo]++;}
+  });
+  procurements.forEach(function(p){
+    var dt=parseDate(p.order_date);
+    if(dt&&dt.getFullYear()===selYear){var mo=dt.getMonth();if(mo>=0&&mo<12)pData[mo]++;}
+  });
+
+  var ctx=document.getElementById('rpt-chart');
+  if(ctx){
+    if(rptChart)rptChart.destroy();
+    rptChart=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:months,
+        datasets:[
+          {label:'Assignments',data:aData,backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4},
+          {label:'Procurement POs',data:pData,backgroundColor:'rgba(34,197,94,0.7)',borderRadius:4}
+        ]
+      },
+      options:{
+        responsive:true,
+        plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11}}},
+          y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},stepSize:1}}
+        }
+      }
+    });
+  }
+
+  // Assignments table
+  var ah=filtA.length?filtA.map(function(a){
+    var sc=a.status==='Active'?'g':'gr';
+    return'<tr><td><strong>'+(a.item_name||'')+'</strong></td><td><span class="badge b">'+(a.category||'')+'</span></td>'
+      +'<td>'+(a.person_name||'')+'</td><td style="color:#64748b">'+(a.department||'—')+'</td>'
+      +'<td>'+(a.sr_number?'<span style="font-size:11px;background:#fef9c3;color:#a16207;padding:2px 6px;border-radius:8px">'+a.sr_number+'</span>':'—')+'</td>'
+      +'<td>'+dc(a.assigned_on||'','calendar')+'</td>'
+      +'<td><span class="badge '+sc+'">'+(a.status||'')+'</span></td></tr>';
+  }).join(''):'<tr><td colspan="7" class="empty">No assignments this period</td></tr>';
+  S('rpt-a-cnt').textContent='('+filtA.length+')';
+  S('rpt-a-body').innerHTML=ah;
+
+  // Procurement table
+  var ph=filtP.length?filtP.map(function(p){
+    var sc=p.status==='Received'?'g':p.status==='Pending'?'y':'r';
+    return'<tr><td><strong>'+(p.id||'')+'</strong></td><td>'+(p.item_name||p.item||'')+'</td>'
+      +'<td><span class="badge b">'+(p.category||'')+'</span></td><td>'+(p.qty||0)+'</td>'
+      +'<td style="color:#64748b">'+(p.vendor||'')+'</td><td>'+dc(p.order_date||'','calendar')+'</td>'
+      +'<td><span class="badge '+sc+'">'+(p.status||'')+'</span></td></tr>';
+  }).join(''):'<tr><td colspan="7" class="empty">No procurement this period</td></tr>';
+  S('rpt-p-cnt').textContent='('+filtP.length+')';
+  S('rpt-p-body').innerHTML=ph;
+
+  // SR Numbers table
+  var srh=filtSR.length?filtSR.map(function(s){
+    return'<tr><td><strong>'+(s.item_name||'')+'</strong></td>'
+      +'<td><span style="font-family:monospace;font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">'+(s.sr_number||'')+'</span></td>'
+      +'<td><span class="badge r">Assigned</span></td>'
+      +'<td>'+(s.current_person_name||'—')+'</td>'
+      +'<td>'+dc(s.assigned_date||'','calendar')+'</td></tr>';
+  }).join(''):'<tr><td colspan="5" class="empty">No SR numbers assigned this period</td></tr>';
+  S('rpt-sr-cnt').textContent='('+filtSR.length+')';
+  S('rpt-sr-body').innerHTML=srh;
+
+  // Software table
+  var swh=filtSW.length?filtSW.map(function(s){
+    var due=s.due_date?new Date(s.due_date):null;
+    var diff=due?Math.ceil((due-today)/(1000*60*60*24)):null;
+    var daysStr=diff===null?'—':diff<0?'Expired':diff+' days';
+    var daysStyle=diff===null?'':diff<0?'color:#dc2626;font-weight:700':diff<=30?'color:#d97706;font-weight:700':'color:#15803d';
+    var sc=diff===null?'gr':diff<0?'r':diff<=30?'y':'g';
+    return'<tr><td><strong>'+(s.name||'')+'</strong></td><td style="color:#64748b;font-size:11px">'+(s.version||'—')+'</td>'
+      +'<td>'+dc(s.due_date||'','calendar')+'</td>'
+      +'<td style="'+daysStyle+'">'+daysStr+'</td>'
+      +'<td><span class="badge '+sc+'">'+(s.status||'Active')+'</span></td></tr>';
+  }).join(''):'<tr><td colspan="5" class="empty">No software expiring this period</td></tr>';
+  S('rpt-sw-cnt').textContent='('+filtSW.length+')';
+  S('rpt-sw-body').innerHTML=swh;
+}
+
+function doSearch(raw){
+  const q=(raw||'').trim().toLowerCase();
+  const sp=S('srch-panel');
+  if(!q){if(sp)sp.style.display='none';showCurrentTab();return;}
+  var tabs2=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+  for(var ti=0;ti<tabs2.length;ti++){var tel=document.getElementById('tab-'+tabs2[ti]);if(tel)tel.style.display='none';}
+  sp.style.display='block';
+  const sI=[],sP=[],sA=[],sL=[];
+  items.forEach(i=>{if([i.name||'',i.category||'',i.model||''].join(' ').toLowerCase().includes(q)){const st=sstat(i);sI.push(`<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="clearSearch();go('stock',document.querySelector('.sitem[onclick*=stock]'))"><div style="width:27px;height:27px;border-radius:7px;background:#dbeafe;color:#1e40af;display:flex;align-items:center;justify-content:center;font-size:13px"><i class="ti ti-device-laptop"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:700">${i.name||''}</div><div style="font-size:11px;color:#6b7280">${i.category||''}</div></div><span class="badge ${st.c}">${st.l}</span></div>`)}});
+  people.forEach(p=>{if([p.name||'',p.department||'',p.role||''].join(' ').toLowerCase().includes(q)){sP.push(`<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="clearSearch();go('employees',document.querySelector('.sitem[onclick*=employees]'))">${circ(p.name||'',26)}<div style="flex:1;margin-left:5px"><div style="font-size:13px;font-weight:700">${p.name||''}</div><div style="font-size:11px;color:#6b7280">${p.role||''}${p.department?' · '+p.department:''}</div></div></div>`)}});
+  assignments.forEach(a=>{if([a.person_name||'',a.item_name||'',a.sr_number||''].join(' ').toLowerCase().includes(q)){const sc=a.status==='Active'?'g':'gr';sA.push(`<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="clearSearch();go('assignments',document.querySelector('.sitem[onclick*=assignments]'))"><div style="width:27px;height:27px;border-radius:7px;background:#ede9fe;color:#5b21b6;display:flex;align-items:center;justify-content:center;font-size:13px"><i class="ti ti-send"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:700">${a.item_name||''} to ${a.person_name||''}</div><div style="font-size:11px;color:#6b7280">${a.sr_number?'SR: '+a.sr_number:''}</div></div><span class="badge ${sc}">${a.status}</span></div>`)}});
+  laptops.forEach(l=>{if([l.name||'',l.brand||'',l.model||'',l.serial||''].join(' ').toLowerCase().includes(q)){const sc=(l.status||'').toLowerCase()==='assigned'?'b':'g';sL.push(`<div style="display:flex;align-items:center;gap:9px;padding:9px 13px;border-bottom:1px solid #f3f4f6;cursor:pointer" onclick="clearSearch();goLaptops()"><div style="width:27px;height:27px;border-radius:7px;background:#d1fae5;color:#065f46;display:flex;align-items:center;justify-content:center;font-size:13px"><i class="ti ti-device-laptop"></i></div><div style="flex:1"><div style="font-size:13px;font-weight:700">${l.name||''}</div><div style="font-size:11px;color:#6b7280">${l.brand||''}${l.model?' · '+l.model:''}${l.serial?' · S/N:'+l.serial:''}</div></div><span class="badge ${sc}">${l.status||'Available'}</span></div>`)}});
+  const total=sI.length+sP.length+sA.length+sL.length;
+  if(!total){sp.innerHTML=`<div class="empty">No results for "${raw}"</div>`;return}
+  var sh='<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">';
+  if(sL.length)sh+='<div style="padding:6px 13px;font-size:10px;font-weight:700;color:#6b7280;background:#f9fafb;text-transform:uppercase;letter-spacing:.06em">Laptops ('+sL.length+')</div>'+sL.join('');
+  if(sI.length)sh+='<div style="padding:6px 13px;font-size:10px;font-weight:700;color:#6b7280;background:#f9fafb;text-transform:uppercase;letter-spacing:.06em">Items ('+sI.length+')</div>'+sI.join('');
+  if(sP.length)sh+='<div style="padding:6px 13px;font-size:10px;font-weight:700;color:#6b7280;background:#f9fafb;text-transform:uppercase;letter-spacing:.06em">People ('+sP.length+')</div>'+sP.join('');
+  if(sA.length)sh+='<div style="padding:6px 13px;font-size:10px;font-weight:700;color:#6b7280;background:#f9fafb;text-transform:uppercase;letter-spacing:.06em">Assignments ('+sA.length+')</div>'+sA.join('');
+  sp.innerHTML=sh+'</div>';
+}
+function clearSearch(){S('srch').value='';S('srch-panel').style.display='none';showCurrentTab()}
+function showCurrentTab(){
+  var active=document.querySelector('.sitem.on');
+  var tabName=active?(active.getAttribute('onclick')||'').match(/'(\w+)'/)?.[1]:'overview';
+  if(!tabName)tabName='overview';
+  var tabs=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+  for(var i=0;i<tabs.length;i++){
+    var el=document.getElementById('tab-'+tabs[i]);
+    if(el)el.style.display=(tabs[i]===tabName)?'block':'none';
+  }
+}
+
+/* ── NAVIGATION ── */
+function goLaptops(){
+  var tabs=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+  for(var i=0;i<tabs.length;i++){var el=document.getElementById('tab-'+tabs[i]);if(el)el.style.display=(tabs[i]==='laptops')?'block':'none';}
+  document.querySelectorAll('.sitem').forEach(function(b){b.classList.remove('on');});
+  var btn=document.querySelector('.sitem[onclick*=laptops]');
+  if(btn)btn.classList.add('on');
+  drawLaptops();
+}
+function go(tab,btn){
+  var TABS=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+  for(var i=0;i<TABS.length;i++){
+    var el=document.getElementById('tab-'+TABS[i]);
+    if(el)el.style.display=(TABS[i]===tab)?'block':'none';
+  }
+  document.querySelectorAll('.sitem').forEach(function(b){b.classList.remove('on');});
+  if(btn)btn.classList.add('on');
+  document.getElementById('srch-panel').style.display='none';
+  if(tab==='overview'){drawMetrics();drawCat();}
+  else if(tab==='stock')drawStock();
+  else if(tab==='assignments')drawAssignments();
+  else if(tab==='timeline')drawTimeline();
+  else if(tab==='employees')drawEmployees();
+  else if(tab==='procurement')drawProcurement();
+  else if(tab==='srnumbers')drawSR();
+  else if(tab==='laptops'){
+    var lc=document.getElementById('laptop-cards');
+    if(lc)lc.innerHTML='';
+    drawLaptops();
+  }
+  else if(tab==='systems'){
+    var sm=document.getElementById('sys-metrics');
+    var sb2=document.getElementById('sys-blocks');
+    var sb3=document.getElementById('sys-body');
+    if(sm)sm.innerHTML='';
+    if(sb2)sb2.innerHTML='';
+    if(sb3)sb3.innerHTML='';
+    drawSystems();
+  }
+  else if(tab==='software'){
+    drawSoftware();
+  }
+}
+
+S('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+var srchEl=S('srch');
+if(srchEl)srchEl.addEventListener('input',function(){doSearch(this.value);});
+
+
+// AUTH
+function tryLogin(){
+  var u=document.getElementById('l-user').value.trim();
+  var p=document.getElementById('l-pass').value;
+  var err=document.getElementById('login-err');
+  if(u==='TLM'&&p==='TLM@1234'){
+    err.style.display='none';
+    sessionStorage.setItem('tlm_ok','1');
+    document.getElementById('login-overlay').style.display='none';
+  } else {
+    err.style.display='block';
+    err.textContent=!u?'Enter username':!p?'Enter password':'Invalid username or password';
+    document.getElementById('l-pass').value='';
+  }
+}
+function toggleAvMenu(){
+  var m=document.getElementById('av-menu');
+  m.style.display=m.style.display==='none'?'block':'none';
+}
+document.addEventListener('click',function(e){
+  var wrap=document.getElementById('av-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    var m=document.getElementById('av-menu');
+    if(m)m.style.display='none';
+  }
+});
+function logout(){
+  sessionStorage.removeItem('tlm_ok');
+  document.getElementById('login-overlay').style.display='flex';
+  document.getElementById('l-user').value='';
+  document.getElementById('l-pass').value='';
+  document.getElementById('login-err').style.display='none';
+}
+// Check session on load
+if(sessionStorage.getItem('tlm_ok')==='1'){
+  document.getElementById('login-overlay').style.display='none';
+} else {
+  setTimeout(function(){document.getElementById('l-user').focus();},100);
+}
+
+// STARTUP - force overview visible immediately, clear any stale state
+(function(){
+  var TABS=['overview','stock','assignments','timeline','employees','procurement','bills','srnumbers','laptops','systems','software','reports'];
+  for(var i=0;i<TABS.length;i++){
+    var el=document.getElementById('tab-'+TABS[i]);
+    if(el)el.style.display=(TABS[i]==='overview')?'block':'none';
+  }
+  document.querySelectorAll('.sitem').forEach(function(b){b.classList.remove('on');});
+  var ovBtn=document.querySelector('.sitem[onclick*=overview]');
+  if(ovBtn)ovBtn.classList.add('on');
+})();
+
+syncAll();
+</script>
+</body>
+</html>
